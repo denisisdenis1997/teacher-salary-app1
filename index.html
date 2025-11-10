@@ -483,7 +483,7 @@ function doPost(e) {
         'Дата', 'Запланировано', 'Проведено', 'Отменено', 
         'Стоимости_планируемых', 'Стоимости_проведенных', 'Стоимости_отмененных',
         'Причина_отмены', 'Выручка_плановая', 'Выручка_фактическая', 
-        'Выручка_отмененная', 'Зарплата_45%', 'Время_добавления'
+        'Выручка_отмененная', 'Зарплата_40%', 'Время_добавления'
       ]]);
     }
     
@@ -867,7 +867,7 @@ function doGet(e) {
                     
                 const totalRevenue = conductedLessons.reduce((sum, cost) => sum + cost.value, 0);
                 const totalCancelledRevenue = cancelledLessons.reduce((sum, cost) => sum + cost.value, 0);
-                const teacherSalary = totalRevenue * 0.45; // 45%
+                const teacherSalary = totalRevenue * 0.40; // 40%
                 
                 document.getElementById('salaryCalculation').style.display = 'block';
                 
@@ -892,7 +892,7 @@ function doGet(e) {
                     <div class="salary-breakdown">
                         <div>💰 Общая выручка: <strong>${totalRevenue.toFixed(2)} руб.</strong></div>
                         <div style="color: #2d3748; font-weight: bold; margin-top: 5px;">
-                            💵 Зарплата (45%): <strong>${teacherSalary.toFixed(2)} руб.</strong>
+                            💵 Зарплата (40%): <strong>${teacherSalary.toFixed(2)} руб.</strong>
                         </div>
                     </div>
                 `;
@@ -907,9 +907,9 @@ function doGet(e) {
         function showKVPHelp() {
             alert('КВП (Коэффициент Выполнения Плана) - показывает эффективность работы.\n\n' +
                   'Формула расчета:\n' +
-                  'КВП = (Фактическая зарплата × 100%) / (Плановая зарплата × 45%)\n\n' +
+                  'КВП = (Фактическая зарплата × 100%) / (Плановая зарплата × 40%)\n\n' +
                   'Где:\n' +
-                  '• Фактическая зарплата = проведенные занятия × 45% от стоимости\n' +
+                  '• Фактическая зарплата = проведенные занятия × 40% от стоимости\n' +
                   '• Плановая зарплата = запланированные занятия × стоимость\n\n' +
                   'КВП 100% = план выполнен полностью');
         }
@@ -1122,7 +1122,7 @@ function doGet(e) {
                     <div class="stat-item">❌ Занятий отменено: <strong>${totalCancelled}</strong></div>
                     <div class="stat-item">📈 Процент отмен: <strong>${cancellationRate.toFixed(1)}%</strong></div>
                     <div class="stat-item">💰 Общая выручка: <strong>${totalActualRevenue.toFixed(2)} руб.</strong></div>
-                    <div class="stat-item">💵 Общая зарплата (45%): <strong>${totalTeacherSalary.toFixed(2)} руб.</strong></div>
+                    <div class="stat-item">💵 Общая зарплата (40%): <strong>${totalTeacherSalary.toFixed(2)} руб.</strong></div>
                     <div class="stat-item">📅 Средняя зарплата в месяц: <strong>${avgMonthlySalary.toFixed(2)} руб.</strong></div>
                     <div class="stat-item">🎯 КВП: <strong>${kvp.toFixed(1)}%</strong></div>
                 </div>
