@@ -303,12 +303,23 @@
             color: #48bb78;
             font-weight: bold;
         }
+        
+        .debug-info {
+            background: #edf2f7;
+            border: 1px solid #cbd5e0;
+            border-radius: 8px;
+            padding: 10px;
+            margin: 10px 0;
+            font-size: 12px;
+            color: #4a5568;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
             <h1>💰 Расчет средней зарплаты</h1>
+            <small style="opacity: 0.8;">XMLHttpRequest версия</small>
         </div>
         
         <!-- Главное меню -->
@@ -433,11 +444,15 @@
             <button class="back-btn" onclick="showScreen('mainMenu')">← Назад</button>
             <h2 style="margin-bottom: 20px;">Настройки Google Apps Script</h2>
             
+            <div class="debug-info">
+                <strong>🔧 Режим отладки:</strong> Используется XMLHttpRequest для обхода CORS
+            </div>
+            
             <div class="instruction-box">
                 <h4>📋 Инструкция по настройке:</h4>
                 <div class="instruction-step">Создайте Google Apps Script по <a href="https://script.google.com" target="_blank">этой ссылке</a></div>
                 <div class="instruction-step">Вставьте код из инструкции ниже</div>
-                <div class="instruction-step">Разверните как веб-приложение</div>
+                <div class="instruction-step">Разверните как веб-приложение с доступом "Все"</div>
                 <div class="instruction-step">Скопируйте URL веб-приложения сюда</div>
             </div>
             
@@ -458,14 +473,12 @@
                 <textarea id="scriptCode" style="width: 100%; height: 200px; font-family: monospace; font-size: 12px; padding: 10px; border: 1px solid #ccc; border-radius: 4px;" readonly>
 function doPost(e) {
   try {
-    // УКАЖИТЕ ID ВАШЕЙ ТАБЛИЦЫ ЗДЕСЬ:
-    var sheetId = 'ВАШ_ID_ТАБЛИЦЫ';
-    var sheet = SpreadsheetApp.openById(sheetId).getSheetByName('Sheet1');
+    // УКАЖИТЕ ВАШ РЕАЛЬНЫЙ ID ТАБЛИЦЫ:
+    var sheetId = 'ВАШ_РЕАЛЬНЫЙ_ID_ТАБЛИЦЫ';
     
-    // Если лист не существует, создаем его
+    var sheet = SpreadsheetApp.openById(sheetId).getSheetByName('Sheet1');
     if (!sheet) {
       sheet = SpreadsheetApp.openById(sheetId).insertSheet('Sheet1');
-      // Создаем заголовки
       sheet.getRange('A1:M1').setValues([[
         'Дата', 'Запланировано', 'Проведено', 'Отменено', 
         'Стоимости_планируемых', 'Стоимости_проведенных', 'Стоимости_отмененных',
@@ -494,21 +507,24 @@ function doPost(e) {
     
     sheet.appendRow(row);
     
-    return ContentService
-      .createTextOutput(JSON.stringify({success: true, message: "Данные сохранены"}))
-      .setMimetype(ContentService.MimeType.JSON);
+    return ContentService.createTextOutput(JSON.stringify({
+      success: true, 
+      message: "Данные сохранены"
+    })).setMimeType(ContentService.MimeType.JSON);
       
   } catch (error) {
-    return ContentService
-      .createTextOutput(JSON.stringify({success: false, message: error.toString()}))
-      .setMimetype(ContentService.MimeType.JSON);
+    return ContentService.createTextOutput(JSON.stringify({
+      success: false, 
+      message: error.toString()
+    })).setMimeType(ContentService.MimeType.JSON);
   }
 }
 
 function doGet(e) {
-  return ContentService
-    .createTextOutput(JSON.stringify({success: true, message: "Сервер работает"}))
-    .setMimetype(ContentService.MimeType.JSON);
+  return ContentService.createTextOutput(JSON.stringify({
+    success: true, 
+    message: "Сервер работает - готов к приему данных"
+  })).setMimeType(ContentService.MimeType.JSON);
 }
                 </textarea>
                 <button class="btn-secondary" onclick="copyScriptCode()" style="margin-top: 10px;">📋 Скопировать код</button>
@@ -542,6 +558,8 @@ function doGet(e) {
             // Загружаем настройки в форму
             document.getElementById('scriptUrl').value = CONFIG.SCRIPT_URL;
             document.getElementById('sheetId').value = CONFIG.SHEET_ID;
+            
+            console.log('🚀 Приложение загружено. XMLHttpRequest версия.');
         });
 
         // Копировать код скрипта
@@ -556,9 +574,190 @@ function doGet(e) {
         function loadLocalData() {
             const localData = localStorage.getItem('teacherRecords');
             if (localData) {
-                console.log('Локальные данные загружены:', JSON.parse(localData).length, 'записей');
+                console.log('📂 Локальные данные загружены:', JSON.parse(localData).length, 'записей');
             }
         }
+
+        // ========== ОСНОВНЫЕ ФУНКЦИИ XMLHttpRequest ==========
+
+        // ОБНОВЛЕННАЯ ФУНКЦИЯ: Сохранить в Google Sheets через XMLHttpRequest
+        function saveToGoogleSheets(record) {
+            return new Promise((resolve, reject) => {
+                if (!CONFIG.SCRIPT_URL) {
+                    reject(new Error('URL скрипта не настроен'));
+                    return;
+                }
+
+                console.log('🔧 Начинаю отправку данных через XMLHttpRequest...');
+                console.log('📦 Данные для отправки:', record);
+
+                const xhr = new XMLHttpRequest();
+                
+                // Используем асинхронный запрос
+                xhr.open('POST', CONFIG.SCRIPT_URL, true);
+                xhr.setRequestHeader('Content-Type', 'application/json; charset=UTF-8');
+                
+                xhr.onreadystatechange = function() {
+                    console.log(`🔄 Статус: ${xhr.readyState}, HTTP: ${xhr.status}`);
+                    
+                    if (xhr.readyState === 4) { // Запрос завершен
+                        console.log('📨 Ответ получен:', xhr.status, xhr.responseText);
+                        
+                        if (xhr.status === 200) {
+                            try {
+                                const result = JSON.parse(xhr.responseText);
+                                if (result.success) {
+                                    console.log('✅ Данные успешно сохранены в Google Sheets');
+                                    resolve(result);
+                                } else {
+                                    console.error('❌ Ошибка от сервера:', result.message);
+                                    reject(new Error(result.message));
+                                }
+                            } catch (e) {
+                                console.error('❌ Ошибка парсинга JSON:', e);
+                                reject(new Error('Неверный формат ответа от сервера'));
+                            }
+                        } else {
+                            console.error('❌ HTTP ошибка:', xhr.status, xhr.statusText);
+                            reject(new Error(`HTTP error ${xhr.status}: ${xhr.statusText}`));
+                        }
+                    }
+                };
+                
+                xhr.onerror = function() {
+                    console.error('❌ Ошибка сети XMLHttpRequest');
+                    reject(new Error('Network error - невозможно подключиться к серверу'));
+                };
+                
+                xhr.ontimeout = function() {
+                    console.error('⏰ Таймаут запроса');
+                    reject(new Error('Request timeout - сервер не ответил вовремя'));
+                };
+                
+                // Увеличиваем таймаут для надежности
+                xhr.timeout = 30000; // 30 секунд
+                
+                console.log('🚀 Отправляю запрос на:', CONFIG.SCRIPT_URL);
+                xhr.send(JSON.stringify(record));
+            });
+        }
+
+        // ОБНОВЛЕННАЯ ФУНКЦИЯ: Проверить подключение через XMLHttpRequest
+        function testConnection() {
+            if (!CONFIG.SCRIPT_URL) {
+                document.getElementById('settingsStatus').innerHTML = 
+                    '<div class="error">❌ Заполните URL Google Apps Script</div>';
+                return;
+            }
+
+            document.getElementById('settingsStatus').innerHTML = 
+                '<div class="loading">🔄 Проверяю подключение через XMLHttpRequest...</div>';
+
+            console.log('🔧 Тестирую подключение к:', CONFIG.SCRIPT_URL);
+
+            const xhr = new XMLHttpRequest();
+            xhr.open('GET', CONFIG.SCRIPT_URL, true);
+            xhr.timeout = 15000;
+            
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === 4) {
+                    console.log('📨 Тестовый ответ:', xhr.status, xhr.responseText);
+                    
+                    if (xhr.status === 200) {
+                        try {
+                            const result = JSON.parse(xhr.responseText);
+                            document.getElementById('settingsStatus').innerHTML = 
+                                `<div class="success">✅ Подключение успешно! ${result.message}</div>`;
+                            console.log('✅ Подключение работает!');
+                        } catch (e) {
+                            document.getElementById('settingsStatus').innerHTML = 
+                                '<div class="success">✅ Подключение успешно! (Ответ получен)</div>';
+                            console.log('✅ Подключение работает (не JSON ответ)');
+                        }
+                    } else {
+                        document.getElementById('settingsStatus').innerHTML = 
+                            `<div class="error">❌ Ошибка HTTP: ${xhr.status} - ${xhr.statusText}</div>`;
+                        console.error('❌ Ошибка подключения:', xhr.status, xhr.statusText);
+                    }
+                }
+            };
+            
+            xhr.onerror = function() {
+                document.getElementById('settingsStatus').innerHTML = 
+                    '<div class="error">❌ Не удалось подключиться к серверу. Проверьте URL и интернет.</div>';
+                console.error('❌ Ошибка сети при тестировании');
+            };
+            
+            xhr.ontimeout = function() {
+                document.getElementById('settingsStatus').innerHTML = 
+                    '<div class="error">❌ Таймаут подключения. Сервер не отвечает.</div>';
+                console.error('⏰ Таймаут при тестировании');
+            };
+            
+            console.log('🚀 Отправляю тестовый запрос...');
+            xhr.send();
+        }
+
+        // ОБНОВЛЕННАЯ ФУНКЦИЯ: Синхронизировать с Google Sheets
+        async function syncToGoogleSheets() {
+            const records = JSON.parse(localStorage.getItem('teacherRecords') || '[]');
+            
+            if (records.length === 0) {
+                document.getElementById('settingsStatus').innerHTML = 
+                    '<div class="error">❌ Нет данных для синхронизации</div>';
+                return;
+            }
+
+            if (!CONFIG.SCRIPT_URL) {
+                document.getElementById('settingsStatus').innerHTML = 
+                    '<div class="error">❌ Сначала настройте URL Google Apps Script</div>';
+                return;
+            }
+
+            console.log('🔄 Начинаю синхронизацию', records.length, 'записей...');
+
+            document.getElementById('settingsStatus').innerHTML = 
+                '<div class="loading">🔄 Начинаю синхронизацию через XMLHttpRequest...</div>';
+
+            try {
+                let successCount = 0;
+                let errorCount = 0;
+                
+                for (const record of records) {
+                    try {
+                        console.log(`📤 Синхронизирую запись от ${record.date}...`);
+                        await saveToGoogleSheets(record);
+                        successCount++;
+                        
+                        document.getElementById('settingsStatus').innerHTML = 
+                            `<div class="loading">🔄 Синхронизировано ${successCount} из ${records.length} записей...</div>`;
+                        
+                        console.log(`✅ Успешно: ${successCount}/${records.length}`);
+                        
+                        // Пауза между запросами чтобы не перегружать сервер
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                        
+                    } catch (error) {
+                        errorCount++;
+                        console.error(`❌ Ошибка синхронизации записи ${record.date}:`, error);
+                    }
+                }
+                
+                const resultMessage = errorCount === 0 ? 
+                    `<div class="success">✅ Все ${successCount} записей успешно синхронизированы с Google Sheets!</div>` :
+                    `<div class="success">✅ Синхронизация завершена! Успешно: ${successCount}, Ошибок: ${errorCount}</div>`;
+                
+                document.getElementById('settingsStatus').innerHTML = resultMessage;
+                console.log('🎉 Синхронизация завершена!', resultMessage);
+                    
+            } catch (error) {
+                console.error('💥 Общая ошибка синхронизации:', error);
+                document.getElementById('settingsStatus').innerHTML = 
+                    `<div class="error">❌ Ошибка синхронизации: ${error.message}</div>`;
+            }
+        }
+
+        // ========== СТАРЫЕ ФУНКЦИИ (без изменений) ==========
 
         // Добавить поле для стоимости занятия
         function addCostField() {
@@ -752,7 +951,7 @@ function doGet(e) {
             loadStats(months);
         }
 
-        // ОСНОВНАЯ ФУНКЦИЯ: Добавить запись
+        // ОБНОВЛЕННАЯ ФУНКЦИЯ: Добавить запись (с улучшенной обработкой)
         async function addRecord() {
             const date = document.getElementById('recordDate').value || new Date().toISOString().split('T')[0];
             const cancellationReason = document.getElementById('cancellationReason').value;
@@ -817,13 +1016,15 @@ function doGet(e) {
             // Пытаемся сохранить в Google Sheets если настроено
             if (CONFIG.SCRIPT_URL) {
                 try {
+                    console.log('🔄 Пытаюсь сохранить в Google Sheets...');
                     await saveToGoogleSheets(record);
                     document.getElementById('addRecordStatus').innerHTML = 
                         '<div class="success">✅ Запись сохранена в Google Sheets!</div>';
+                    console.log('✅ Успешно сохранено в Google Sheets!');
                 } catch (error) {
-                    console.error('Ошибка Google Sheets:', error);
+                    console.error('❌ Ошибка Google Sheets:', error);
                     document.getElementById('addRecordStatus').innerHTML = 
-                        '<div class="success">✅ Запись сохранена локально (Google Sheets: ' + error.message + ')</div>';
+                        `<div class="success">✅ Запись сохранена локально (Google Sheets: ${error.message})</div>`;
                 }
             } else {
                 document.getElementById('addRecordStatus').innerHTML = 
@@ -850,73 +1051,21 @@ function doGet(e) {
             const records = JSON.parse(localStorage.getItem('teacherRecords') || '[]');
             records.push(record);
             localStorage.setItem('teacherRecords', JSON.stringify(records));
-            console.log('Сохранено локально, всего записей:', records.length);
+            console.log('💾 Сохранено локально, всего записей:', records.length);
         }
 
-        // Сохранить в Google Sheets через Apps Script
-        async function saveToGoogleSheets(record) {
-            if (!CONFIG.SCRIPT_URL) {
-                throw new Error('URL скрипта не настроен');
-            }
-
-            const response = await fetch(CONFIG.SCRIPT_URL, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(record)
-            });
-
-            if (!response.ok) {
-                throw new Error(`HTTP error ${response.status}`);
-            }
-
-            const result = await response.json();
+        // Сохранить настройки
+        function saveSettings() {
+            CONFIG.SCRIPT_URL = document.getElementById('scriptUrl').value.trim();
+            CONFIG.SHEET_ID = document.getElementById('sheetId').value.trim();
             
-            if (!result.success) {
-                throw new Error(result.message);
-            }
-
-            return result;
-        }
-
-        // Альтернативный метод через JSONP
-function saveToGoogleSheetsJSONP(record) {
-    return new Promise((resolve, reject) => {
-        if (!CONFIG.SCRIPT_URL) {
-            reject(new Error('URL скрипта не настроен'));
-            return;
-        }
-
-        const callbackName = 'callback_' + Date.now();
-        const script = document.createElement('script');
-        
-        window[callbackName] = function(response) {
-            delete window[callbackName];
-            document.body.removeChild(script);
+            localStorage.setItem('scriptUrl', CONFIG.SCRIPT_URL);
+            localStorage.setItem('sheetId', CONFIG.SHEET_ID);
             
-            if (response.success) {
-                resolve(response);
-            } else {
-                reject(new Error(response.message));
-            }
-        };
-        
-        // Отправляем данные как GET параметры
-        const params = new URLSearchParams();
-        params.append('data', JSON.stringify(record));
-        params.append('callback', callbackName);
-        
-        script.src = CONFIG.SCRIPT_URL + '?' + params.toString();
-        script.onerror = function() {
-            delete window[callbackName];
-            document.body.removeChild(script);
-            reject(new Error('Network error'));
-        };
-        
-        document.body.appendChild(script);
-    });
-}
+            document.getElementById('settingsStatus').innerHTML = 
+                '<div class="success">✅ Настройки сохранены!</div>';
+        }
+
         // Загрузить статистику из локального хранилища
         function loadStats(months) {
             const records = JSON.parse(localStorage.getItem('teacherRecords') || '[]');
@@ -1007,98 +1156,6 @@ function saveToGoogleSheetsJSONP(record) {
                 });
                 recordsHTML += '</div>';
                 document.getElementById('recordsList').innerHTML = recordsHTML;
-            }
-        }
-
-        // Сохранить настройки
-        function saveSettings() {
-            CONFIG.SCRIPT_URL = document.getElementById('scriptUrl').value.trim();
-            CONFIG.SHEET_ID = document.getElementById('sheetId').value.trim();
-            
-            localStorage.setItem('scriptUrl', CONFIG.SCRIPT_URL);
-            localStorage.setItem('sheetId', CONFIG.SHEET_ID);
-            
-            document.getElementById('settingsStatus').innerHTML = 
-                '<div class="success">✅ Настройки сохранены!</div>';
-        }
-
-        // Проверить подключение к Google Apps Script
-       async function testConnection() {
-    if (!CONFIG.SCRIPT_URL) {
-        document.getElementById('settingsStatus').innerHTML = 
-            '<div class="error">❌ Заполните URL Google Apps Script</div>';
-        return;
-    }
-
-    try {
-        // Добавляем параметр чтобы обойти CORS
-        const testUrl = CONFIG.SCRIPT_URL + '?test=' + Date.now();
-        console.log('Тестируем URL:', testUrl);
-        
-        const response = await fetch(testUrl, {
-            method: 'GET',
-            mode: 'no-cors' // Важно: добавляем этот параметр
-        });
-        
-        // Если дошли сюда - подключение есть
-        document.getElementById('settingsStatus').innerHTML = 
-            '<div class="success">✅ Подключение к Google Apps Script успешно!</div>';
-            
-    } catch (error) {
-        console.error('Ошибка подключения:', error);
-        document.getElementById('settingsStatus').innerHTML = 
-            `<div class="error">❌ Ошибка сети: ${error.message}</div>`;
-    }
-}
-
-        // Синхронизировать с Google Sheets
-        async function syncToGoogleSheets() {
-            const records = JSON.parse(localStorage.getItem('teacherRecords') || '[]');
-            
-            if (records.length === 0) {
-                document.getElementById('settingsStatus').innerHTML = 
-                    '<div class="error">❌ Нет данных для синхронизации</div>';
-                return;
-            }
-
-            if (!CONFIG.SCRIPT_URL) {
-                document.getElementById('settingsStatus').innerHTML = 
-                    '<div class="error">❌ Сначала настройте URL Google Apps Script</div>';
-                return;
-            }
-
-            document.getElementById('settingsStatus').innerHTML = 
-                '<div class="loading">🔄 Начинаю синхронизацию через Google Apps Script...</div>';
-
-            try {
-                let successCount = 0;
-                let errorCount = 0;
-                
-                for (const record of records) {
-                    try {
-                        await saveToGoogleSheets(record);
-                        successCount++;
-                        document.getElementById('settingsStatus').innerHTML = 
-                            `<div class="loading">🔄 Синхронизировано ${successCount} из ${records.length} записей...</div>`;
-                        
-                        // Пауза между запросами
-                        await new Promise(resolve => setTimeout(resolve, 1000));
-                    } catch (error) {
-                        errorCount++;
-                        console.error('Ошибка синхронизации записи:', error);
-                    }
-                }
-                
-                const resultMessage = errorCount === 0 ? 
-                    `<div class="success">✅ Все ${successCount} записей успешно синхронизированы!</div>` :
-                    `<div class="success">✅ Синхронизация завершена! Успешно: ${successCount}, Ошибок: ${errorCount}</div>`;
-                
-                document.getElementById('settingsStatus').innerHTML = resultMessage;
-                    
-            } catch (error) {
-                console.error('Общая ошибка синхронизации:', error);
-                document.getElementById('settingsStatus').innerHTML = 
-                    `<div class="error">❌ Ошибка синхронизации: ${error.message}</div>`;
             }
         }
 
