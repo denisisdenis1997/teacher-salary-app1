@@ -129,6 +129,14 @@
             background: #38a169;
         }
         
+        .btn-danger {
+            background: #e53e3e;
+        }
+        
+        .btn-danger:hover {
+            background: #c53030;
+        }
+        
         .btn-info {
             background: #4299e1;
             padding: 8px 12px;
@@ -313,13 +321,112 @@
             font-size: 12px;
             color: #4a5568;
         }
+        
+        .record-item {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+            position: relative;
+        }
+        
+        .record-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .record-date {
+            font-weight: bold;
+            color: #2d3748;
+        }
+        
+        .record-details {
+            color: #4a5568;
+            margin-bottom: 10px;
+        }
+        
+        .record-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .btn-sm {
+            padding: 8px 12px;
+            font-size: 14px;
+            width: auto;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal.active {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+        }
+        
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        
+        .file-input {
+            display: none;
+        }
+        
+        .file-label {
+            display: block;
+            padding: 12px;
+            background: #e9ecef;
+            border: 2px dashed #6c757d;
+            border-radius: 8px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 10px 0;
+        }
+        
+        .file-label:hover {
+            background: #dee2e6;
+            border-color: #3498db;
+        }
+        
+        .import-summary {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
             <h1>💰 Расчет средней зарплаты</h1>
-            <small style="opacity: 0.8;">XMLHttpRequest версия</small>
+            <small style="opacity: 0.8;">Версия с импортом/экспортом</small>
         </div>
         
         <!-- Главное меню -->
@@ -330,8 +437,7 @@
                 <button class="menu-btn" onclick="showScreen('customStatsScreen')">📈 Статистика (N месяцев)</button>
                 <button class="menu-btn" onclick="showScreen('forecastScreen')">🔮 Прогноз зарплаты</button>
                 <button class="menu-btn" onclick="showRecentRecords()">📋 Последние записи</button>
-                <button class="menu-btn" onclick="showScreen('settingsScreen')">⚙️ Настройки Google Apps Script</button>
-                <button class="menu-btn" onclick="exportLocalData()">💾 Экспорт локальных данных</button>
+                <button class="menu-btn" onclick="showScreen('dataManagementScreen')">💾 Управление данными</button>
             </div>
         </div>
         
@@ -374,7 +480,7 @@
             
             <button class="btn btn-success" onclick="addRecord()">💾 Сохранить запись</button>
             <div class="local-storage-notice">
-                💡 Данные сохраняются локально в браузере. Настройте Google Apps Script для сохранения в Google Sheets.
+                💡 Данные сохраняются локально в браузере.
             </div>
             <div id="addRecordStatus"></div>
         </div>
@@ -439,107 +545,60 @@
             </div>
         </div>
         
-        <!-- Настройки Google Apps Script -->
-        <div id="settingsScreen" class="screen">
+        <!-- Управление данными -->
+        <div id="dataManagementScreen" class="screen">
             <button class="back-btn" onclick="showScreen('mainMenu')">← Назад</button>
-            <h2 style="margin-bottom: 20px;">Настройки Google Apps Script</h2>
+            <h2 style="margin-bottom: 20px;">Управление данными</h2>
             
-            <div class="debug-info">
-                <strong>🔧 Режим отладки:</strong> Используется XMLHttpRequest для обхода CORS
-            </div>
-            
-            <div class="instruction-box">
-                <h4>📋 Инструкция по настройке:</h4>
-                <div class="instruction-step">Создайте Google Apps Script по <a href="https://script.google.com" target="_blank">этой ссылке</a></div>
-                <div class="instruction-step">Вставьте код из инструкции ниже</div>
-                <div class="instruction-step">Разверните как веб-приложение с доступом "Все"</div>
-                <div class="instruction-step">Скопируйте URL веб-приложения сюда</div>
-            </div>
-            
-            <div class="form-group">
-                <label>URL Google Apps Script:</label>
-                <input type="text" id="scriptUrl" placeholder="https://script.google.com/macros/s/..." style="width: 100%">
-                <small style="color: #666;">Получите после развертывания скрипта</small>
-            </div>
-            
-            <div class="form-group">
-                <label>ID Google таблицы (для справки):</label>
-                <input type="text" id="sheetId" placeholder="Введите ID вашей таблицы (опционально)">
-                <small style="color: #666;">ID таблицы куда будут сохраняться данные</small>
+            <div class="info-box">
+                <h4>📊 Экспорт данных</h4>
+                <p>Экспортируйте все записи в CSV файл для резервного копирования или анализа в других программах.</p>
+                <button class="btn btn-success" onclick="exportToCSV()">📤 Экспорт в CSV</button>
             </div>
             
             <div class="info-box">
-                <h4>📝 Код для Google Apps Script:</h4>
-                <textarea id="scriptCode" style="width: 100%; height: 200px; font-family: monospace; font-size: 12px; padding: 10px; border: 1px solid #ccc; border-radius: 4px;" readonly>
-function doPost(e) {
-  try {
-    // УКАЖИТЕ ВАШ РЕАЛЬНЫЙ ID ТАБЛИЦЫ:
-    var sheetId = 'ВАШ_РЕАЛЬНЫЙ_ID_ТАБЛИЦЫ';
-    
-    var sheet = SpreadsheetApp.openById(sheetId).getSheetByName('Sheet1');
-    if (!sheet) {
-      sheet = SpreadsheetApp.openById(sheetId).insertSheet('Sheet1');
-      sheet.getRange('A1:M1').setValues([[
-        'Дата', 'Запланировано', 'Проведено', 'Отменено', 
-        'Стоимости_планируемых', 'Стоимости_проведенных', 'Стоимости_отмененных',
-        'Причина_отмены', 'Выручка_плановая', 'Выручка_фактическая', 
-        'Выручка_отмененная', 'Зарплата_45%', 'Время_добавления'
-      ]]);
-    }
-    
-    var data = JSON.parse(e.postData.contents);
-    
-    var row = [
-      data.date,
-      data.planned,
-      data.conducted,
-      data.cancelled,
-      JSON.stringify(data.plannedCosts),
-      JSON.stringify(data.conductedCosts),
-      JSON.stringify(data.cancelledCosts),
-      data.cancellationReason,
-      data.totalPlannedRevenue,
-      data.totalRevenue,
-      data.totalCancelledRevenue,
-      data.teacherSalary,
-      new Date().toISOString()
-    ];
-    
-    sheet.appendRow(row);
-    
-    return ContentService.createTextOutput(JSON.stringify({
-      success: true, 
-      message: "Данные сохранены"
-    })).setMimeType(ContentService.MimeType.JSON);
-      
-  } catch (error) {
-    return ContentService.createTextOutput(JSON.stringify({
-      success: false, 
-      message: error.toString()
-    })).setMimeType(ContentService.MimeType.JSON);
-  }
-}
-
-function doGet(e) {
-  return ContentService.createTextOutput(JSON.stringify({
-    success: true, 
-    message: "Сервер работает - готов к приему данных"
-  })).setMimeType(ContentService.MimeType.JSON);
-}
-                </textarea>
-                <button class="btn-secondary" onclick="copyScriptCode()" style="margin-top: 10px;">📋 Скопировать код</button>
+                <h4>📥 Импорт данных</h4>
+                <p>Импортируйте записи из CSV файла. Проверка дубликатов выполняется автоматически.</p>
+                <label class="file-label">
+                    📁 Выберите CSV файл
+                    <input type="file" id="importFile" class="file-input" accept=".csv" onchange="handleFileImport(this.files)">
+                </label>
+                <div id="importResults"></div>
             </div>
             
-            <button class="btn" onclick="saveSettings()">💾 Сохранить настройки</button>
-            <button class="btn btn-secondary" onclick="testConnection()">🔗 Проверить подключение</button>
-            <button class="btn btn-success" onclick="syncToGoogleSheets()">🔄 Синхронизировать с Google Sheets</button>
+            <div class="info-box">
+                <h4>🗑️ Управление записями</h4>
+                <p>Просмотр и удаление сохраненных записей.</p>
+                <button class="btn" onclick="showAllRecords()">📋 Показать все записи</button>
+            </div>
             
-            <div id="settingsStatus" style="margin-top: 20px;"></div>
+            <div id="dataManagementContent"></div>
+        </div>
+        
+        <!-- Все записи для управления -->
+        <div id="allRecordsScreen" class="screen">
+            <button class="back-btn" onclick="showScreen('dataManagementScreen')">← Назад</button>
+            <h2 style="margin-bottom: 20px;">Все записи</h2>
+            <div id="allRecordsList">
+                <div class="loading">Загрузка записей...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно подтверждения удаления -->
+    <div class="modal" id="deleteModal">
+        <div class="modal-content">
+            <h3 style="margin-bottom: 15px;">Подтверждение удаления</h3>
+            <p>Вы уверены, что хотите удалить эту запись?</p>
+            <div class="modal-actions">
+                <button class="btn btn-danger btn-sm" onclick="confirmDelete()">🗑️ Удалить</button>
+                <button class="btn btn-secondary btn-sm" onclick="cancelDelete()">Отмена</button>
+            </div>
         </div>
     </div>
 
     <script>
-        // Конфигурация Google Apps Script
+        // Конфигурация
         let CONFIG = {
             SCRIPT_URL: localStorage.getItem('scriptUrl') || '',
             SHEET_ID: localStorage.getItem('sheetId') || ''
@@ -548,27 +607,15 @@ function doGet(e) {
         // Массив для хранения стоимостей занятий
         let lessonCosts = [];
         let cancelledLessons = [];
+        let recordToDelete = null;
 
         // Инициализация
         document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('recordDate').value = new Date().toISOString().split('T')[0];
             addCostField();
             loadLocalData();
-            
-            // Загружаем настройки в форму
-            document.getElementById('scriptUrl').value = CONFIG.SCRIPT_URL;
-            document.getElementById('sheetId').value = CONFIG.SHEET_ID;
-            
-            console.log('🚀 Приложение загружено. XMLHttpRequest версия.');
+            console.log('🚀 Приложение загружено. Версия с импортом/экспортом.');
         });
-
-        // Копировать код скрипта
-        function copyScriptCode() {
-            const textarea = document.getElementById('scriptCode');
-            textarea.select();
-            document.execCommand('copy');
-            alert('Код скопирован в буфер обмена!');
-        }
 
         // Загрузить локальные данные
         function loadLocalData() {
@@ -578,186 +625,289 @@ function doGet(e) {
             }
         }
 
-        // ========== ОСНОВНЫЕ ФУНКЦИИ XMLHttpRequest ==========
+        // ========== ФУНКЦИИ УПРАВЛЕНИЯ ДАННЫМИ ==========
 
-        // ОБНОВЛЕННАЯ ФУНКЦИЯ: Сохранить в Google Sheets через XMLHttpRequest
-        function saveToGoogleSheets(record) {
-            return new Promise((resolve, reject) => {
-                if (!CONFIG.SCRIPT_URL) {
-                    reject(new Error('URL скрипта не настроен'));
-                    return;
-                }
-
-                console.log('🔧 Начинаю отправку данных через XMLHttpRequest...');
-                console.log('📦 Данные для отправки:', record);
-
-                const xhr = new XMLHttpRequest();
-                
-                // Используем асинхронный запрос
-                xhr.open('POST', CONFIG.SCRIPT_URL, true);
-                xhr.setRequestHeader('Content-Type', 'application/json; charset=UTF-8');
-                
-                xhr.onreadystatechange = function() {
-                    console.log(`🔄 Статус: ${xhr.readyState}, HTTP: ${xhr.status}`);
-                    
-                    if (xhr.readyState === 4) { // Запрос завершен
-                        console.log('📨 Ответ получен:', xhr.status, xhr.responseText);
-                        
-                        if (xhr.status === 200) {
-                            try {
-                                const result = JSON.parse(xhr.responseText);
-                                if (result.success) {
-                                    console.log('✅ Данные успешно сохранены в Google Sheets');
-                                    resolve(result);
-                                } else {
-                                    console.error('❌ Ошибка от сервера:', result.message);
-                                    reject(new Error(result.message));
-                                }
-                            } catch (e) {
-                                console.error('❌ Ошибка парсинга JSON:', e);
-                                reject(new Error('Неверный формат ответа от сервера'));
-                            }
-                        } else {
-                            console.error('❌ HTTP ошибка:', xhr.status, xhr.statusText);
-                            reject(new Error(`HTTP error ${xhr.status}: ${xhr.statusText}`));
-                        }
-                    }
-                };
-                
-                xhr.onerror = function() {
-                    console.error('❌ Ошибка сети XMLHttpRequest');
-                    reject(new Error('Network error - невозможно подключиться к серверу'));
-                };
-                
-                xhr.ontimeout = function() {
-                    console.error('⏰ Таймаут запроса');
-                    reject(new Error('Request timeout - сервер не ответил вовремя'));
-                };
-                
-                // Увеличиваем таймаут для надежности
-                xhr.timeout = 30000; // 30 секунд
-                
-                console.log('🚀 Отправляю запрос на:', CONFIG.SCRIPT_URL);
-                xhr.send(JSON.stringify(record));
-            });
-        }
-
-        // ОБНОВЛЕННАЯ ФУНКЦИЯ: Проверить подключение через XMLHttpRequest
-        function testConnection() {
-            if (!CONFIG.SCRIPT_URL) {
-                document.getElementById('settingsStatus').innerHTML = 
-                    '<div class="error">❌ Заполните URL Google Apps Script</div>';
-                return;
-            }
-
-            document.getElementById('settingsStatus').innerHTML = 
-                '<div class="loading">🔄 Проверяю подключение через XMLHttpRequest...</div>';
-
-            console.log('🔧 Тестирую подключение к:', CONFIG.SCRIPT_URL);
-
-            const xhr = new XMLHttpRequest();
-            xhr.open('GET', CONFIG.SCRIPT_URL, true);
-            xhr.timeout = 15000;
-            
-            xhr.onreadystatechange = function() {
-                if (xhr.readyState === 4) {
-                    console.log('📨 Тестовый ответ:', xhr.status, xhr.responseText);
-                    
-                    if (xhr.status === 200) {
-                        try {
-                            const result = JSON.parse(xhr.responseText);
-                            document.getElementById('settingsStatus').innerHTML = 
-                                `<div class="success">✅ Подключение успешно! ${result.message}</div>`;
-                            console.log('✅ Подключение работает!');
-                        } catch (e) {
-                            document.getElementById('settingsStatus').innerHTML = 
-                                '<div class="success">✅ Подключение успешно! (Ответ получен)</div>';
-                            console.log('✅ Подключение работает (не JSON ответ)');
-                        }
-                    } else {
-                        document.getElementById('settingsStatus').innerHTML = 
-                            `<div class="error">❌ Ошибка HTTP: ${xhr.status} - ${xhr.statusText}</div>`;
-                        console.error('❌ Ошибка подключения:', xhr.status, xhr.statusText);
-                    }
-                }
-            };
-            
-            xhr.onerror = function() {
-                document.getElementById('settingsStatus').innerHTML = 
-                    '<div class="error">❌ Не удалось подключиться к серверу. Проверьте URL и интернет.</div>';
-                console.error('❌ Ошибка сети при тестировании');
-            };
-            
-            xhr.ontimeout = function() {
-                document.getElementById('settingsStatus').innerHTML = 
-                    '<div class="error">❌ Таймаут подключения. Сервер не отвечает.</div>';
-                console.error('⏰ Таймаут при тестировании');
-            };
-            
-            console.log('🚀 Отправляю тестовый запрос...');
-            xhr.send();
-        }
-
-        // ОБНОВЛЕННАЯ ФУНКЦИЯ: Синхронизировать с Google Sheets
-        async function syncToGoogleSheets() {
+        // Экспорт в CSV
+        function exportToCSV() {
             const records = JSON.parse(localStorage.getItem('teacherRecords') || '[]');
             
             if (records.length === 0) {
-                document.getElementById('settingsStatus').innerHTML = 
-                    '<div class="error">❌ Нет данных для синхронизации</div>';
+                alert('❌ Нет данных для экспорта');
                 return;
             }
 
-            if (!CONFIG.SCRIPT_URL) {
-                document.getElementById('settingsStatus').innerHTML = 
-                    '<div class="error">❌ Сначала настройте URL Google Apps Script</div>';
-                return;
-            }
+            // Заголовки CSV
+            const headers = [
+                'date', 'planned', 'conducted', 'cancelled', 
+                'plannedCosts', 'conductedCosts', 'cancelledCosts',
+                'cancellationReason', 'totalPlannedRevenue', 'totalRevenue',
+                'totalCancelledRevenue', 'teacherSalary', 'timestamp'
+            ];
 
-            console.log('🔄 Начинаю синхронизацию', records.length, 'записей...');
+            // Данные
+            const csvData = records.map(record => [
+                record.date,
+                record.planned,
+                record.conducted,
+                record.cancelled,
+                JSON.stringify(record.plannedCosts),
+                JSON.stringify(record.conductedCosts),
+                JSON.stringify(record.cancelledCosts),
+                `"${record.cancellationReason}"`,
+                record.totalPlannedRevenue,
+                record.totalRevenue,
+                record.totalCancelledRevenue,
+                record.teacherSalary,
+                record.timestamp
+            ]);
 
-            document.getElementById('settingsStatus').innerHTML = 
-                '<div class="loading">🔄 Начинаю синхронизацию через XMLHttpRequest...</div>';
+            // Объединяем заголовки и данные
+            const csvContent = [headers, ...csvData]
+                .map(row => row.join(','))
+                .join('\n');
 
-            try {
-                let successCount = 0;
-                let errorCount = 0;
-                
-                for (const record of records) {
-                    try {
-                        console.log(`📤 Синхронизирую запись от ${record.date}...`);
-                        await saveToGoogleSheets(record);
-                        successCount++;
-                        
-                        document.getElementById('settingsStatus').innerHTML = 
-                            `<div class="loading">🔄 Синхронизировано ${successCount} из ${records.length} записей...</div>`;
-                        
-                        console.log(`✅ Успешно: ${successCount}/${records.length}`);
-                        
-                        // Пауза между запросами чтобы не перегружать сервер
-                        await new Promise(resolve => setTimeout(resolve, 1000));
-                        
-                    } catch (error) {
-                        errorCount++;
-                        console.error(`❌ Ошибка синхронизации записи ${record.date}:`, error);
-                    }
+            // Создаем и скачиваем файл
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            
+            link.setAttribute('href', url);
+            link.setAttribute('download', `teacher_salary_records_${new Date().toISOString().split('T')[0]}.csv`);
+            link.style.visibility = 'hidden';
+            
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            alert(`✅ Экспортировано ${records.length} записей в CSV`);
+        }
+
+        // Обработка импорта файла
+        function handleFileImport(files) {
+            if (!files.length) return;
+
+            const file = files[0];
+            const reader = new FileReader();
+
+            reader.onload = function(e) {
+                try {
+                    const csvContent = e.target.result;
+                    const importResults = importFromCSV(csvContent);
+                    showImportResults(importResults);
+                } catch (error) {
+                    document.getElementById('importResults').innerHTML = 
+                        `<div class="error">❌ Ошибка при импорте: ${error.message}</div>`;
                 }
+            };
+
+            reader.onerror = function() {
+                document.getElementById('importResults').innerHTML = 
+                    '<div class="error">❌ Ошибка чтения файла</div>';
+            };
+
+            reader.readAsText(file);
+        }
+
+        // Импорт из CSV
+        function importFromCSV(csvContent) {
+            const lines = csvContent.split('\n').filter(line => line.trim());
+            if (lines.length < 2) {
+                throw new Error('Файл пустой или содержит только заголовки');
+            }
+
+            const headers = lines[0].split(',').map(h => h.trim());
+            const existingRecords = JSON.parse(localStorage.getItem('teacherRecords') || '[]');
+            const importedRecords = [];
+            const skippedRecords = [];
+            const errorRecords = [];
+
+            for (let i = 1; i < lines.length; i++) {
+                try {
+                    const values = parseCSVLine(lines[i]);
+                    if (values.length !== headers.length) {
+                        errorRecords.push({ line: i + 1, error: 'Неверное количество колонок' });
+                        continue;
+                    }
+
+                    const record = {
+                        date: values[0],
+                        planned: parseInt(values[1]) || 0,
+                        conducted: parseInt(values[2]) || 0,
+                        cancelled: parseInt(values[3]) || 0,
+                        plannedCosts: JSON.parse(values[4] || '[]'),
+                        conductedCosts: JSON.parse(values[5] || '[]'),
+                        cancelledCosts: JSON.parse(values[6] || '[]'),
+                        cancellationReason: values[7] ? values[7].replace(/"/g, '') : '',
+                        totalPlannedRevenue: parseFloat(values[8]) || 0,
+                        totalRevenue: parseFloat(values[9]) || 0,
+                        totalCancelledRevenue: parseFloat(values[10]) || 0,
+                        teacherSalary: parseFloat(values[11]) || 0,
+                        timestamp: values[12] || new Date().toISOString()
+                    };
+
+                    // Проверка на дубликаты (по дате и timestamp)
+                    const isDuplicate = existingRecords.some(existing => 
+                        existing.date === record.date && existing.timestamp === record.timestamp
+                    );
+
+                    if (isDuplicate) {
+                        skippedRecords.push(record);
+                    } else {
+                        importedRecords.push(record);
+                    }
+
+                } catch (error) {
+                    errorRecords.push({ line: i + 1, error: error.message });
+                }
+            }
+
+            // Сохраняем новые записи
+            if (importedRecords.length > 0) {
+                const allRecords = [...existingRecords, ...importedRecords];
+                localStorage.setItem('teacherRecords', JSON.stringify(allRecords));
+            }
+
+            return {
+                imported: importedRecords.length,
+                skipped: skippedRecords.length,
+                errors: errorRecords.length,
+                total: lines.length - 1,
+                errorDetails: errorRecords
+            };
+        }
+
+        // Парсинг строки CSV
+        function parseCSVLine(line) {
+            const values = [];
+            let current = '';
+            let inQuotes = false;
+
+            for (let i = 0; i < line.length; i++) {
+                const char = line[i];
                 
-                const resultMessage = errorCount === 0 ? 
-                    `<div class="success">✅ Все ${successCount} записей успешно синхронизированы с Google Sheets!</div>` :
-                    `<div class="success">✅ Синхронизация завершена! Успешно: ${successCount}, Ошибок: ${errorCount}</div>`;
-                
-                document.getElementById('settingsStatus').innerHTML = resultMessage;
-                console.log('🎉 Синхронизация завершена!', resultMessage);
-                    
-            } catch (error) {
-                console.error('💥 Общая ошибка синхронизации:', error);
-                document.getElementById('settingsStatus').innerHTML = 
-                    `<div class="error">❌ Ошибка синхронизации: ${error.message}</div>`;
+                if (char === '"') {
+                    inQuotes = !inQuotes;
+                } else if (char === ',' && !inQuotes) {
+                    values.push(current);
+                    current = '';
+                } else {
+                    current += char;
+                }
+            }
+            
+            values.push(current);
+            return values.map(value => value.trim());
+        }
+
+        // Показать результаты импорта
+        function showImportResults(results) {
+            let html = `<div class="import-summary">`;
+            
+            if (results.imported > 0) {
+                html += `<div class="success">✅ Успешно импортировано: ${results.imported} записей</div>`;
+            }
+            
+            if (results.skipped > 0) {
+                html += `<div class="info-box">📝 Пропущено дубликатов: ${results.skipped}</div>`;
+            }
+            
+            if (results.errors > 0) {
+                html += `<div class="error">❌ Ошибок при импорте: ${results.errors}</div>`;
+                if (results.errorDetails.length > 0) {
+                    html += `<div style="font-size: 12px; margin-top: 10px;">`;
+                    results.errorDetails.forEach(error => {
+                        html += `<div>Строка ${error.line}: ${error.error}</div>`;
+                    });
+                    html += `</div>`;
+                }
+            }
+            
+            html += `</div>`;
+            document.getElementById('importResults').innerHTML = html;
+        }
+
+        // Показать все записи для управления
+        function showAllRecords() {
+            showScreen('allRecordsScreen');
+            loadAllRecords();
+        }
+
+        // Загрузить все записи
+        function loadAllRecords() {
+            const records = JSON.parse(localStorage.getItem('teacherRecords') || '[]');
+            const container = document.getElementById('allRecordsList');
+
+            if (records.length === 0) {
+                container.innerHTML = '<div class="demo-data-notice">📋 Нет сохраненных записей.</div>';
+                return;
+            }
+
+            const sortedRecords = records.slice().reverse();
+            let html = '';
+
+            sortedRecords.forEach((record, index) => {
+                html += `
+                    <div class="record-item">
+                        <div class="record-header">
+                            <div class="record-date">${record.date}</div>
+                            <small>${new Date(record.timestamp).toLocaleString()}</small>
+                        </div>
+                        <div class="record-details">
+                            <div>📚 Занятий: ${record.conducted}/${record.planned} (отменено: ${record.cancelled})</div>
+                            <div>💰 Выручка: ${record.totalRevenue.toFixed(2)} руб.</div>
+                            <div>💵 Зарплата: ${record.teacherSalary.toFixed(2)} руб.</div>
+                            ${record.cancellationReason ? `<div>📝 Причина отмены: ${record.cancellationReason}</div>` : ''}
+                        </div>
+                        <div class="record-actions">
+                            <button class="btn btn-danger btn-sm" onclick="deleteRecord(${sortedRecords.length - 1 - index})">
+                                🗑️ Удалить
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        // Удалить запись
+        function deleteRecord(index) {
+            const records = JSON.parse(localStorage.getItem('teacherRecords') || '[]');
+            
+            if (index >= 0 && index < records.length) {
+                recordToDelete = index;
+                document.getElementById('deleteModal').classList.add('active');
             }
         }
 
-        // ========== СТАРЫЕ ФУНКЦИИ (без изменений) ==========
+        // Подтверждение удаления
+        function confirmDelete() {
+            if (recordToDelete !== null) {
+                const records = JSON.parse(localStorage.getItem('teacherRecords') || '[]');
+                records.splice(recordToDelete, 1);
+                localStorage.setItem('teacherRecords', JSON.stringify(records));
+                
+                document.getElementById('deleteModal').classList.remove('active');
+                loadAllRecords();
+                
+                // Показать уведомление
+                const notification = document.createElement('div');
+                notification.className = 'success';
+                notification.textContent = '✅ Запись успешно удалена';
+                document.getElementById('allRecordsList').prepend(notification);
+                
+                setTimeout(() => notification.remove(), 3000);
+            }
+            recordToDelete = null;
+        }
+
+        // Отмена удаления
+        function cancelDelete() {
+            recordToDelete = null;
+            document.getElementById('deleteModal').classList.remove('active');
+        }
+
+        // ========== СУЩЕСТВУЮЩИЕ ФУНКЦИИ (без изменений) ==========
 
         // Добавить поле для стоимости занятия
         function addCostField() {
@@ -867,7 +1017,7 @@ function doGet(e) {
                     
                 const totalRevenue = conductedLessons.reduce((sum, cost) => sum + cost.value, 0);
                 const totalCancelledRevenue = cancelledLessons.reduce((sum, cost) => sum + cost.value, 0);
-                const teacherSalary = totalRevenue * 0.45; // 45%
+                const teacherSalary = totalRevenue * 0.40; // 40%
                 
                 document.getElementById('salaryCalculation').style.display = 'block';
                 
@@ -892,7 +1042,7 @@ function doGet(e) {
                     <div class="salary-breakdown">
                         <div>💰 Общая выручка: <strong>${totalRevenue.toFixed(2)} руб.</strong></div>
                         <div style="color: #2d3748; font-weight: bold; margin-top: 5px;">
-                            💵 Зарплата (45%): <strong>${teacherSalary.toFixed(2)} руб.</strong>
+                            💵 Зарплата (40%): <strong>${teacherSalary.toFixed(2)} руб.</strong>
                         </div>
                     </div>
                 `;
@@ -907,9 +1057,9 @@ function doGet(e) {
         function showKVPHelp() {
             alert('КВП (Коэффициент Выполнения Плана) - показывает эффективность работы.\n\n' +
                   'Формула расчета:\n' +
-                  'КВП = (Фактическая зарплата × 100%) / (Плановая зарплата × 45%)\n\n' +
+                  'КВП = (Фактическая зарплата × 100%) / (Плановая зарплата × 40%)\n\n' +
                   'Где:\n' +
-                  '• Фактическая зарплата = проведенные занятия × 45% от стоимости\n' +
+                  '• Фактическая зарплата = проведенные занятия × 40% от стоимости\n' +
                   '• Плановая зарплата = запланированные занятия × стоимость\n\n' +
                   'КВП 100% = план выполнен полностью');
         }
@@ -920,12 +1070,6 @@ function doGet(e) {
                 screen.classList.remove('active');
             });
             document.getElementById(screenId).classList.add('active');
-            
-            // Загружаем настройки в форму
-            if (screenId === 'settingsScreen') {
-                document.getElementById('scriptUrl').value = CONFIG.SCRIPT_URL;
-                document.getElementById('sheetId').value = CONFIG.SHEET_ID;
-            }
             
             // Загружаем данные при показе экранов
             if (screenId === 'statsScreen') {
@@ -951,7 +1095,7 @@ function doGet(e) {
             loadStats(months);
         }
 
-        // ОБНОВЛЕННАЯ ФУНКЦИЯ: Добавить запись (с улучшенной обработкой)
+        // Добавить запись
         async function addRecord() {
             const date = document.getElementById('recordDate').value || new Date().toISOString().split('T')[0];
             const cancellationReason = document.getElementById('cancellationReason').value;
@@ -990,7 +1134,7 @@ function doGet(e) {
             const totalPlannedRevenue = plannedLessons.reduce((sum, lesson) => sum + lesson.cost, 0);
             const totalRevenue = conductedLessons.reduce((sum, lesson) => sum + lesson.cost, 0);
             const totalCancelledRevenue = cancelledLessons.reduce((sum, lesson) => sum + lesson.cost, 0);
-            const teacherSalary = totalRevenue * 0.45;
+            const teacherSalary = totalRevenue * 0.40;
             const timestamp = new Date().toISOString();
 
             // Создаем запись
@@ -1013,23 +1157,8 @@ function doGet(e) {
             // Сохраняем локально
             saveToLocalStorage(record);
             
-            // Пытаемся сохранить в Google Sheets если настроено
-            if (CONFIG.SCRIPT_URL) {
-                try {
-                    console.log('🔄 Пытаюсь сохранить в Google Sheets...');
-                    await saveToGoogleSheets(record);
-                    document.getElementById('addRecordStatus').innerHTML = 
-                        '<div class="success">✅ Запись сохранена в Google Sheets!</div>';
-                    console.log('✅ Успешно сохранено в Google Sheets!');
-                } catch (error) {
-                    console.error('❌ Ошибка Google Sheets:', error);
-                    document.getElementById('addRecordStatus').innerHTML = 
-                        `<div class="success">✅ Запись сохранена локально (Google Sheets: ${error.message})</div>`;
-                }
-            } else {
-                document.getElementById('addRecordStatus').innerHTML = 
-                    '<div class="success">✅ Запись сохранена локально!</div>';
-            }
+            document.getElementById('addRecordStatus').innerHTML = 
+                '<div class="success">✅ Запись сохранена локально!</div>';
             
             // Очистить форму
             document.getElementById('cancellationReason').value = '';
@@ -1052,18 +1181,6 @@ function doGet(e) {
             records.push(record);
             localStorage.setItem('teacherRecords', JSON.stringify(records));
             console.log('💾 Сохранено локально, всего записей:', records.length);
-        }
-
-        // Сохранить настройки
-        function saveSettings() {
-            CONFIG.SCRIPT_URL = document.getElementById('scriptUrl').value.trim();
-            CONFIG.SHEET_ID = document.getElementById('sheetId').value.trim();
-            
-            localStorage.setItem('scriptUrl', CONFIG.SCRIPT_URL);
-            localStorage.setItem('sheetId', CONFIG.SHEET_ID);
-            
-            document.getElementById('settingsStatus').innerHTML = 
-                '<div class="success">✅ Настройки сохранены!</div>';
         }
 
         // Загрузить статистику из локального хранилища
@@ -1110,7 +1227,7 @@ function doGet(e) {
             });
 
             const avgMonthlySalary = totalTeacherSalary / months;
-            const kvp = totalPlannedRevenue > 0 ? (totalTeacherSalary / (totalPlannedRevenue * 0.45)) * 100 : 0;
+            const kvp = totalPlannedRevenue > 0 ? (totalTeacherSalary / (totalPlannedRevenue * 0.40)) * 100 : 0;
             const cancellationRate = totalPlanned > 0 ? (totalCancelled / totalPlanned) * 100 : 0;
 
             let statsHTML = `
@@ -1122,7 +1239,7 @@ function doGet(e) {
                     <div class="stat-item">❌ Занятий отменено: <strong>${totalCancelled}</strong></div>
                     <div class="stat-item">📈 Процент отмен: <strong>${cancellationRate.toFixed(1)}%</strong></div>
                     <div class="stat-item">💰 Общая выручка: <strong>${totalActualRevenue.toFixed(2)} руб.</strong></div>
-                    <div class="stat-item">💵 Общая зарплата (45%): <strong>${totalTeacherSalary.toFixed(2)} руб.</strong></div>
+                    <div class="stat-item">💵 Общая зарплата (40%): <strong>${totalTeacherSalary.toFixed(2)} руб.</strong></div>
                     <div class="stat-item">📅 Средняя зарплата в месяц: <strong>${avgMonthlySalary.toFixed(2)} руб.</strong></div>
                     <div class="stat-item">🎯 КВП: <strong>${kvp.toFixed(1)}%</strong></div>
                 </div>
@@ -1159,26 +1276,6 @@ function doGet(e) {
             }
         }
 
-        // Экспорт локальных данных
-        function exportLocalData() {
-            const records = JSON.parse(localStorage.getItem('teacherRecords') || '[]');
-            
-            if (records.length === 0) {
-                alert('❌ Нет данных для экспорта');
-                return;
-            }
-
-            const dataStr = JSON.stringify(records, null, 2);
-            const dataBlob = new Blob([dataStr], {type: 'application/json'});
-            
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(dataBlob);
-            link.download = `salary_records_${new Date().toISOString().split('T')[0]}.json`;
-            link.click();
-            
-            alert(`✅ Экспортировано ${records.length} записей`);
-        }
-
         // Рассчитать прогноз зарплаты
         function calculateForecast() {
             const planned = parseInt(document.getElementById('forecastPlanned').value);
@@ -1213,11 +1310,11 @@ function doGet(e) {
                     totalTeacherSalary += record.teacherSalary;
                 });
 
-                historicalKVP = totalPlannedRevenue > 0 ? (totalTeacherSalary / (totalPlannedRevenue * 0.45)) * 100 : 75;
+                historicalKVP = totalPlannedRevenue > 0 ? (totalTeacherSalary / (totalPlannedRevenue * 0.40)) * 100 : 75;
             }
 
             const plannedRevenue = planned * cost;
-            const potentialSalary = plannedRevenue * 0.45;
+            const potentialSalary = plannedRevenue * 0.40;
             const forecastSalary = potentialSalary * (historicalKVP / 100);
 
             document.getElementById('forecastResult').innerHTML = `
