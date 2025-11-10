@@ -1016,7 +1016,7 @@
                     
                 const totalRevenue = conductedLessons.reduce((sum, cost) => sum + cost.value, 0);
                 const totalCancelledRevenue = cancelledLessons.reduce((sum, cost) => sum + cost.value, 0);
-                const teacherSalary = totalRevenue * 0.4; // 40%
+                const teacherSalary = totalRevenue * 0.45; // 45%
                 
                 document.getElementById('salaryCalculation').style.display = 'block';
                 
@@ -1041,7 +1041,7 @@
                     <div class="salary-breakdown">
                         <div>💰 Общая выручка: <strong>${totalRevenue.toFixed(2)} руб.</strong></div>
                         <div style="color: #2d3748; font-weight: bold; margin-top: 5px;">
-                            💵 Зарплата (40%): <strong>${teacherSalary.toFixed(2)} руб.</strong>
+                            💵 Зарплата (45%): <strong>${teacherSalary.toFixed(2)} руб.</strong>
                         </div>
                     </div>
                 `;
@@ -1056,9 +1056,9 @@
         function showKVPHelp() {
             alert('КВП (Коэффициент Выполнения Плана) - показывает эффективность работы.\n\n' +
                   'Формула расчета:\n' +
-                  'КВП = (Фактическая зарплата × 100%) / (Плановая зарплата × 40%)\n\n' +
+                  'КВП = (Фактическая зарплата × 100%) / (Плановая зарплата × 45%)\n\n' +
                   'Где:\n' +
-                  '• Фактическая зарплата = проведенные занятия × 40% от стоимости\n' +
+                  '• Фактическая зарплата = проведенные занятия × 45% от стоимости\n' +
                   '• Плановая зарплата = запланированные занятия × стоимость\n\n' +
                   'КВП 100% = план выполнен полностью');
         }
@@ -1135,7 +1135,7 @@
             const totalPlannedRevenue = plannedLessons.reduce((sum, lesson) => sum + lesson.cost, 0);
             const totalRevenue = conductedLessons.reduce((sum, lesson) => sum + lesson.cost, 0);
             const totalCancelledRevenue = cancelledLessons.reduce((sum, lesson) => sum + lesson.cost, 0);
-            const teacherSalary = totalRevenue * 0.4;
+            const teacherSalary = totalRevenue * 0.45;
             const timestamp = new Date().toISOString();
 
             // Создаем запись
@@ -1229,7 +1229,7 @@
             });
 
             const avgMonthlySalary = totalTeacherSalary / months;
-            const kvp = totalPlannedRevenue > 0 ? (totalTeacherSalary / (totalPlannedRevenue * 0.4)) * 100 : 0;
+            const kvp = totalPlannedRevenue > 0 ? (totalTeacherSalary / (totalPlannedRevenue * 0.45)) * 100 : 0;
             const cancellationRate = totalPlanned > 0 ? (totalCancelled / totalPlanned) * 100 : 0;
 
             let statsHTML = `
@@ -1241,7 +1241,7 @@
                     <div class="stat-item">❌ Занятий отменено: <strong>${totalCancelled}</strong></div>
                     <div class="stat-item">📈 Процент отмен: <strong>${cancellationRate.toFixed(1)}%</strong></div>
                     <div class="stat-item">💰 Общая выручка: <strong>${totalActualRevenue.toFixed(2)} руб.</strong></div>
-                    <div class="stat-item">💵 Общая зарплата (40%): <strong>${totalTeacherSalary.toFixed(2)} руб.</strong></div>
+                    <div class="stat-item">💵 Общая зарплата (45%): <strong>${totalTeacherSalary.toFixed(2)} руб.</strong></div>
                     <div class="stat-item">📅 Средняя зарплата в месяц: <strong>${avgMonthlySalary.toFixed(2)} руб.</strong></div>
                     <div class="stat-item">🎯 КВП: <strong>${kvp.toFixed(1)}%</strong></div>
                 </div>
@@ -1250,33 +1250,39 @@
             container.innerHTML = statsHTML;
         }
 
-        // Загрузить последние записи
+        // Загрузить последние записи - ИСПРАВЛЕННАЯ ФУНКЦИЯ
         function loadRecentRecords() {
             const records = JSON.parse(localStorage.getItem('teacherRecords') || '[]');
             const container = document.getElementById('recordsList');
-            const recentRecords = records.slice(-10).reverse();
-
-            if (recentRecords.length === 0) {
+            
+            if (records.length === 0) {
                 container.innerHTML = `
                     <div class="demo-data-notice">
                         📋 Нет сохраненных записей. Добавьте первую запись.
                     </div>
                 `;
-            } else {
-                let recordsHTML = '<div class="stats">';
-                recentRecords.forEach(record => {
-                    recordsHTML += `
-                        <div class="stat-item">
-                            <strong>${record.date}</strong><br>
-                            📚 ${record.conducted}/${record.planned} занятий<br>
-                            ${record.cancelled > 0 ? `❌ Отменено: ${record.cancelled}<br>` : ''}
+                return;
+            }
+
+            // Берем последние 10 записей и переворачиваем для отображения от новых к старым
+            const recentRecords = records.slice(-10).reverse();
+            let recordsHTML = '<div class="stats">';
+            
+            recentRecords.forEach(record => {
+                recordsHTML += `
+                    <div class="stat-item">
+                        <div style="font-weight: bold; margin-bottom: 5px;">${record.date}</div>
+                        <div>📚 Занятий: ${record.conducted}/${record.planned}</div>
+                        ${record.cancelled > 0 ? `<div>❌ Отменено: ${record.cancelled}</div>` : ''}
+                        <div style="margin-top: 5px;">
                             💵 Зарплата: <strong>${record.teacherSalary.toFixed(2)} руб.</strong>
                         </div>
-                    `;
-                });
-                recordsHTML += '</div>';
-                container.innerHTML = recordsHTML;
-            }
+                    </div>
+                `;
+            });
+            
+            recordsHTML += '</div>';
+            container.innerHTML = recordsHTML;
         }
 
         // Рассчитать прогноз зарплаты
@@ -1313,11 +1319,11 @@
                     totalTeacherSalary += record.teacherSalary;
                 });
 
-                historicalKVP = totalPlannedRevenue > 0 ? (totalTeacherSalary / (totalPlannedRevenue * 0.4)) * 100 : 75;
+                historicalKVP = totalPlannedRevenue > 0 ? (totalTeacherSalary / (totalPlannedRevenue * 0.45)) * 100 : 75;
             }
 
             const plannedRevenue = planned * cost;
-            const potentialSalary = plannedRevenue * 0.4;
+            const potentialSalary = plannedRevenue * 0.45;
             const forecastSalary = potentialSalary * (historicalKVP / 100);
 
             document.getElementById('forecastResult').innerHTML = `
