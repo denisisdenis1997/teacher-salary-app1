@@ -880,6 +880,43 @@ function doGet(e) {
             return result;
         }
 
+        // Альтернативный метод через JSONP
+function saveToGoogleSheetsJSONP(record) {
+    return new Promise((resolve, reject) => {
+        if (!CONFIG.SCRIPT_URL) {
+            reject(new Error('URL скрипта не настроен'));
+            return;
+        }
+
+        const callbackName = 'callback_' + Date.now();
+        const script = document.createElement('script');
+        
+        window[callbackName] = function(response) {
+            delete window[callbackName];
+            document.body.removeChild(script);
+            
+            if (response.success) {
+                resolve(response);
+            } else {
+                reject(new Error(response.message));
+            }
+        };
+        
+        // Отправляем данные как GET параметры
+        const params = new URLSearchParams();
+        params.append('data', JSON.stringify(record));
+        params.append('callback', callbackName);
+        
+        script.src = CONFIG.SCRIPT_URL + '?' + params.toString();
+        script.onerror = function() {
+            delete window[callbackName];
+            document.body.removeChild(script);
+            reject(new Error('Network error'));
+        };
+        
+        document.body.appendChild(script);
+    });
+}
         // Загрузить статистику из локального хранилища
         function loadStats(months) {
             const records = JSON.parse(localStorage.getItem('teacherRecords') || '[]');
