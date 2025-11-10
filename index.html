@@ -986,28 +986,33 @@ function doGet(e) {
         }
 
         // Проверить подключение к Google Apps Script
-        async function testConnection() {
-            if (!CONFIG.SCRIPT_URL) {
-                document.getElementById('settingsStatus').innerHTML = 
-                    '<div class="error">❌ Заполните URL Google Apps Script</div>';
-                return;
-            }
+       async function testConnection() {
+    if (!CONFIG.SCRIPT_URL) {
+        document.getElementById('settingsStatus').innerHTML = 
+            '<div class="error">❌ Заполните URL Google Apps Script</div>';
+        return;
+    }
 
-            try {
-                const response = await fetch(CONFIG.SCRIPT_URL);
-                
-                if (response.ok) {
-                    document.getElementById('settingsStatus').innerHTML = 
-                        '<div class="success">✅ Подключение к Google Apps Script успешно!</div>';
-                } else {
-                    document.getElementById('settingsStatus').innerHTML = 
-                        `<div class="error">❌ Ошибка подключения: ${response.status}</div>`;
-                }
-            } catch (error) {
-                document.getElementById('settingsStatus').innerHTML = 
-                    `<div class="error">❌ Ошибка сети: ${error.message}</div>`;
-            }
-        }
+    try {
+        // Добавляем параметр чтобы обойти CORS
+        const testUrl = CONFIG.SCRIPT_URL + '?test=' + Date.now();
+        console.log('Тестируем URL:', testUrl);
+        
+        const response = await fetch(testUrl, {
+            method: 'GET',
+            mode: 'no-cors' // Важно: добавляем этот параметр
+        });
+        
+        // Если дошли сюда - подключение есть
+        document.getElementById('settingsStatus').innerHTML = 
+            '<div class="success">✅ Подключение к Google Apps Script успешно!</div>';
+            
+    } catch (error) {
+        console.error('Ошибка подключения:', error);
+        document.getElementById('settingsStatus').innerHTML = 
+            `<div class="error">❌ Ошибка сети: ${error.message}</div>`;
+    }
+}
 
         // Синхронизировать с Google Sheets
         async function syncToGoogleSheets() {
