@@ -281,6 +281,28 @@
             font-size: 14px;
             color: #234e52;
         }
+        
+        .instruction-box {
+            background: #f0fff4;
+            border: 1px solid #9ae6b4;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        
+        .instruction-step {
+            margin: 10px 0;
+            padding-left: 20px;
+            position: relative;
+        }
+        
+        .instruction-step:before {
+            content: "•";
+            position: absolute;
+            left: 5px;
+            color: #48bb78;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
@@ -297,7 +319,7 @@
                 <button class="menu-btn" onclick="showScreen('customStatsScreen')">📈 Статистика (N месяцев)</button>
                 <button class="menu-btn" onclick="showScreen('forecastScreen')">🔮 Прогноз зарплаты</button>
                 <button class="menu-btn" onclick="showRecentRecords()">📋 Последние записи</button>
-                <button class="menu-btn" onclick="showScreen('settingsScreen')">⚙️ Настройки Google Sheets</button>
+                <button class="menu-btn" onclick="showScreen('settingsScreen')">⚙️ Настройки Google Apps Script</button>
                 <button class="menu-btn" onclick="exportLocalData()">💾 Экспорт локальных данных</button>
             </div>
         </div>
@@ -341,7 +363,7 @@
             
             <button class="btn btn-success" onclick="addRecord()">💾 Сохранить запись</button>
             <div class="local-storage-notice">
-                💡 Данные сохраняются локально в браузере. Настройте Google Sheets для облачного хранения.
+                💡 Данные сохраняются локально в браузере. Настройте Google Apps Script для сохранения в Google Sheets.
             </div>
             <div id="addRecordStatus"></div>
         </div>
@@ -406,29 +428,90 @@
             </div>
         </div>
         
-        <!-- Настройки Google Sheets -->
+        <!-- Настройки Google Apps Script -->
         <div id="settingsScreen" class="screen">
             <button class="back-btn" onclick="showScreen('mainMenu')">← Назад</button>
-            <h2 style="margin-bottom: 20px;">Настройки Google Sheets</h2>
+            <h2 style="margin-bottom: 20px;">Настройки Google Apps Script</h2>
             
-            <div class="form-group">
-                <label>ID Google таблицы:</label>
-                <input type="text" id="sheetId" placeholder="Введите ID вашей таблицы">
+            <div class="instruction-box">
+                <h4>📋 Инструкция по настройке:</h4>
+                <div class="instruction-step">Создайте Google Apps Script по <a href="https://script.google.com" target="_blank">этой ссылке</a></div>
+                <div class="instruction-step">Вставьте код из инструкции ниже</div>
+                <div class="instruction-step">Разверните как веб-приложение</div>
+                <div class="instruction-step">Скопируйте URL веб-приложения сюда</div>
             </div>
             
             <div class="form-group">
-                <label>API ключ:</label>
-                <input type="text" id="apiKey" placeholder="Введите ваш API ключ">
+                <label>URL Google Apps Script:</label>
+                <input type="text" id="scriptUrl" placeholder="https://script.google.com/macros/s/..." style="width: 100%">
+                <small style="color: #666;">Получите после развертывания скрипта</small>
             </div>
             
-            <div class="stats">
-                <h4>Инструкция:</h4>
-                <ol style="padding-left: 20px; margin: 10px 0;">
-                    <li>Создайте Google таблицу</li>
-                    <li>Получите ID из URL</li>
-                    <li>Создайте API ключ в Google Cloud</li>
-                    <li>Откройте доступ к таблице</li>
-                </ol>
+            <div class="form-group">
+                <label>ID Google таблицы (для справки):</label>
+                <input type="text" id="sheetId" placeholder="Введите ID вашей таблицы (опционально)">
+                <small style="color: #666;">ID таблицы куда будут сохраняться данные</small>
+            </div>
+            
+            <div class="info-box">
+                <h4>📝 Код для Google Apps Script:</h4>
+                <textarea id="scriptCode" style="width: 100%; height: 200px; font-family: monospace; font-size: 12px; padding: 10px; border: 1px solid #ccc; border-radius: 4px;" readonly>
+function doPost(e) {
+  try {
+    // УКАЖИТЕ ID ВАШЕЙ ТАБЛИЦЫ ЗДЕСЬ:
+    var sheetId = 'ВАШ_ID_ТАБЛИЦЫ';
+    var sheet = SpreadsheetApp.openById(sheetId).getSheetByName('Sheet1');
+    
+    // Если лист не существует, создаем его
+    if (!sheet) {
+      sheet = SpreadsheetApp.openById(sheetId).insertSheet('Sheet1');
+      // Создаем заголовки
+      sheet.getRange('A1:M1').setValues([[
+        'Дата', 'Запланировано', 'Проведено', 'Отменено', 
+        'Стоимости_планируемых', 'Стоимости_проведенных', 'Стоимости_отмененных',
+        'Причина_отмены', 'Выручка_плановая', 'Выручка_фактическая', 
+        'Выручка_отмененная', 'Зарплата_45%', 'Время_добавления'
+      ]]);
+    }
+    
+    var data = JSON.parse(e.postData.contents);
+    
+    var row = [
+      data.date,
+      data.planned,
+      data.conducted,
+      data.cancelled,
+      JSON.stringify(data.plannedCosts),
+      JSON.stringify(data.conductedCosts),
+      JSON.stringify(data.cancelledCosts),
+      data.cancellationReason,
+      data.totalPlannedRevenue,
+      data.totalRevenue,
+      data.totalCancelledRevenue,
+      data.teacherSalary,
+      new Date().toISOString()
+    ];
+    
+    sheet.appendRow(row);
+    
+    return ContentService
+      .createTextOutput(JSON.stringify({success: true, message: "Данные сохранены"}))
+      .setMimetype(ContentService.MimeType.JSON);
+      
+  } catch (error) {
+    return ContentService
+      .createTextOutput(JSON.stringify({success: false, message: error.toString()}))
+      .setMimetype(ContentService.MimeType.JSON);
+  }
+}
+
+function doGet(e) {
+  return ContentService
+    .createTextOutput(JSON.stringify({success: true, message: "Сервер работает"}))
+    .setMimetype(ContentService.MimeType.JSON);
+}
+                </textarea>
+                <button class="btn-secondary" onclick="copyScriptCode()" style="margin-top: 10px;">📋 Скопировать код</button>
             </div>
             
             <button class="btn" onclick="saveSettings()">💾 Сохранить настройки</button>
@@ -440,10 +523,10 @@
     </div>
 
     <script>
-        // Конфигурация Google Sheets
+        // Конфигурация Google Apps Script
         let CONFIG = {
-            SHEET_ID: localStorage.getItem('sheetId') || '',
-            API_KEY: localStorage.getItem('apiKey') || ''
+            SCRIPT_URL: localStorage.getItem('scriptUrl') || '',
+            SHEET_ID: localStorage.getItem('sheetId') || ''
         };
 
         // Массив для хранения стоимостей занятий
@@ -452,22 +535,22 @@
 
         // Инициализация
         document.addEventListener('DOMContentLoaded', function() {
-            // Установить сегодняшнюю дату
             document.getElementById('recordDate').value = new Date().toISOString().split('T')[0];
-            
-            // Добавить первое поле стоимости
             addCostField();
-            
-            // Загрузить локальные данные
             loadLocalData();
             
-            // Проверить настройки
-            if (!CONFIG.SHEET_ID || !CONFIG.API_KEY) {
-                setTimeout(() => {
-                    console.log('Google Sheets не настроен');
-                }, 1000);
-            }
+            // Загружаем настройки в форму
+            document.getElementById('scriptUrl').value = CONFIG.SCRIPT_URL;
+            document.getElementById('sheetId').value = CONFIG.SHEET_ID;
         });
+
+        // Копировать код скрипта
+        function copyScriptCode() {
+            const textarea = document.getElementById('scriptCode');
+            textarea.select();
+            document.execCommand('copy');
+            alert('Код скопирован в буфер обмена!');
+        }
 
         // Загрузить локальные данные
         function loadLocalData() {
@@ -641,8 +724,8 @@
             
             // Загружаем настройки в форму
             if (screenId === 'settingsScreen') {
+                document.getElementById('scriptUrl').value = CONFIG.SCRIPT_URL;
                 document.getElementById('sheetId').value = CONFIG.SHEET_ID;
-                document.getElementById('apiKey').value = CONFIG.API_KEY;
             }
             
             // Загружаем данные при показе экранов
@@ -669,7 +752,7 @@
             loadStats(months);
         }
 
-        // ОСНОВНАЯ ФУНКЦИЯ: Добавить запись (ИСПРАВЛЕННАЯ ВЕРСИЯ)
+        // ОСНОВНАЯ ФУНКЦИЯ: Добавить запись
         async function addRecord() {
             const date = document.getElementById('recordDate').value || new Date().toISOString().split('T')[0];
             const cancellationReason = document.getElementById('cancellationReason').value;
@@ -728,79 +811,39 @@
                 timestamp: timestamp
             };
 
-            try {
-                // Пытаемся сохранить в Google Sheets если настроено
-                if (CONFIG.SHEET_ID && CONFIG.API_KEY) {
+            // Сохраняем локально
+            saveToLocalStorage(record);
+            
+            // Пытаемся сохранить в Google Sheets если настроено
+            if (CONFIG.SCRIPT_URL) {
+                try {
                     await saveToGoogleSheets(record);
-                } else {
-                    // Сохраняем только локально
-                    saveToLocalStorage(record);
                     document.getElementById('addRecordStatus').innerHTML = 
-                        '<div class="success">✅ Запись сохранена локально!</div>';
+                        '<div class="success">✅ Запись сохранена в Google Sheets!</div>';
+                } catch (error) {
+                    console.error('Ошибка Google Sheets:', error);
+                    document.getElementById('addRecordStatus').innerHTML = 
+                        '<div class="success">✅ Запись сохранена локально (Google Sheets: ' + error.message + ')</div>';
                 }
-                
-                // Очистить форму
-                document.getElementById('cancellationReason').value = '';
-                document.getElementById('salaryCalculation').style.display = 'none';
-                document.getElementById('cancellationSection').style.display = 'none';
-                
-                // Очистить стоимости
-                const costsContainer = document.getElementById('costsContainer');
-                costsContainer.innerHTML = '';
-                lessonCosts = [];
-                addCostField();
-                
-                // Вернуться в меню через 2 секунды
-                setTimeout(() => showScreen('mainMenu'), 2000);
-                
-            } catch (error) {
-                console.error('Ошибка сохранения:', error);
-                // Если ошибка Google Sheets, сохраняем локально
-                saveToLocalStorage(record);
+            } else {
                 document.getElementById('addRecordStatus').innerHTML = 
-                    '<div class="success">✅ Запись сохранена локально (Google Sheets недоступен)</div>';
+                    '<div class="success">✅ Запись сохранена локально!</div>';
             }
+            
+            // Очистить форму
+            document.getElementById('cancellationReason').value = '';
+            document.getElementById('salaryCalculation').style.display = 'none';
+            document.getElementById('cancellationSection').style.display = 'none';
+            
+            // Очистить стоимости
+            const costsContainer = document.getElementById('costsContainer');
+            costsContainer.innerHTML = '';
+            lessonCosts = [];
+            addCostField();
+            
+            // Вернуться в меню через 2 секунды
+            setTimeout(() => showScreen('mainMenu'), 2000);
         }
-
-        async function saveToGoogleSheets(record) {
-    const values = [
-        [
-            record.date,
-            record.planned,
-            record.conducted,
-            record.cancelled,
-            JSON.stringify(record.plannedCosts),
-            JSON.stringify(record.conductedCosts),
-            JSON.stringify(record.cancelledCosts),
-            record.cancellationReason,
-            record.totalPlannedRevenue.toFixed(2),
-            record.totalRevenue.toFixed(2),
-            record.totalCancelledRevenue.toFixed(2),
-            record.teacherSalary.toFixed(2),
-            record.timestamp
-        ]
-    ];
-
-    // Используем более простой URL без указания диапазона, а с указанием листа и диапазона A1
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SHEET_ID}/values/Sheet1!A1:append?valueInputOption=RAW&key=${CONFIG.API_KEY}`;
-
-    const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            values: values
-        })
-    });
-
-    if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(`Google Sheets ошибка ${response.status}: ${errorData.error?.message || 'Unknown error'}`);
-    }
-
-    return await response.json();
-}
 
         // Сохранить локально
         function saveToLocalStorage(record) {
@@ -808,6 +851,33 @@
             records.push(record);
             localStorage.setItem('teacherRecords', JSON.stringify(records));
             console.log('Сохранено локально, всего записей:', records.length);
+        }
+
+        // Сохранить в Google Sheets через Apps Script
+        async function saveToGoogleSheets(record) {
+            if (!CONFIG.SCRIPT_URL) {
+                throw new Error('URL скрипта не настроен');
+            }
+
+            const response = await fetch(CONFIG.SCRIPT_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(record)
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error ${response.status}`);
+            }
+
+            const result = await response.json();
+            
+            if (!result.success) {
+                throw new Error(result.message);
+            }
+
+            return result;
         }
 
         // Загрузить статистику из локального хранилища
@@ -905,31 +975,30 @@
 
         // Сохранить настройки
         function saveSettings() {
+            CONFIG.SCRIPT_URL = document.getElementById('scriptUrl').value.trim();
             CONFIG.SHEET_ID = document.getElementById('sheetId').value.trim();
-            CONFIG.API_KEY = document.getElementById('apiKey').value.trim();
             
+            localStorage.setItem('scriptUrl', CONFIG.SCRIPT_URL);
             localStorage.setItem('sheetId', CONFIG.SHEET_ID);
-            localStorage.setItem('apiKey', CONFIG.API_KEY);
             
             document.getElementById('settingsStatus').innerHTML = 
                 '<div class="success">✅ Настройки сохранены!</div>';
         }
 
-        // Проверить подключение к Google Sheets
+        // Проверить подключение к Google Apps Script
         async function testConnection() {
-            if (!CONFIG.SHEET_ID || !CONFIG.API_KEY) {
+            if (!CONFIG.SCRIPT_URL) {
                 document.getElementById('settingsStatus').innerHTML = 
-                    '<div class="error">❌ Заполните ID таблицы и API ключ</div>';
+                    '<div class="error">❌ Заполните URL Google Apps Script</div>';
                 return;
             }
 
             try {
-                const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SHEET_ID}?key=${CONFIG.API_KEY}`;
-                const response = await fetch(url);
+                const response = await fetch(CONFIG.SCRIPT_URL);
                 
                 if (response.ok) {
                     document.getElementById('settingsStatus').innerHTML = 
-                        '<div class="success">✅ Подключение успешно!</div>';
+                        '<div class="success">✅ Подключение к Google Apps Script успешно!</div>';
                 } else {
                     document.getElementById('settingsStatus').innerHTML = 
                         `<div class="error">❌ Ошибка подключения: ${response.status}</div>`;
@@ -950,26 +1019,42 @@
                 return;
             }
 
-            if (!CONFIG.SHEET_ID || !CONFIG.API_KEY) {
+            if (!CONFIG.SCRIPT_URL) {
                 document.getElementById('settingsStatus').innerHTML = 
-                    '<div class="error">❌ Сначала настройте Google Sheets</div>';
+                    '<div class="error">❌ Сначала настройте URL Google Apps Script</div>';
                 return;
             }
 
+            document.getElementById('settingsStatus').innerHTML = 
+                '<div class="loading">🔄 Начинаю синхронизацию через Google Apps Script...</div>';
+
             try {
                 let successCount = 0;
+                let errorCount = 0;
+                
                 for (const record of records) {
                     try {
                         await saveToGoogleSheets(record);
                         successCount++;
+                        document.getElementById('settingsStatus').innerHTML = 
+                            `<div class="loading">🔄 Синхронизировано ${successCount} из ${records.length} записей...</div>`;
+                        
+                        // Пауза между запросами
+                        await new Promise(resolve => setTimeout(resolve, 1000));
                     } catch (error) {
+                        errorCount++;
                         console.error('Ошибка синхронизации записи:', error);
                     }
                 }
                 
-                document.getElementById('settingsStatus').innerHTML = 
-                    `<div class="success">✅ Синхронизировано ${successCount} из ${records.length} записей</div>`;
+                const resultMessage = errorCount === 0 ? 
+                    `<div class="success">✅ Все ${successCount} записей успешно синхронизированы!</div>` :
+                    `<div class="success">✅ Синхронизация завершена! Успешно: ${successCount}, Ошибок: ${errorCount}</div>`;
+                
+                document.getElementById('settingsStatus').innerHTML = resultMessage;
+                    
             } catch (error) {
+                console.error('Общая ошибка синхронизации:', error);
                 document.getElementById('settingsStatus').innerHTML = 
                     `<div class="error">❌ Ошибка синхронизации: ${error.message}</div>`;
             }
