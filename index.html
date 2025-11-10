@@ -762,47 +762,45 @@
             }
         }
 
-        // Сохранить в Google Sheets
         async function saveToGoogleSheets(record) {
-            const values = [
-                [
-                    record.date,
-                    record.planned,
-                    record.conducted,
-                    record.cancelled,
-                    JSON.stringify(record.plannedCosts),
-                    JSON.stringify(record.conductedCosts),
-                    JSON.stringify(record.cancelledCosts),
-                    record.cancellationReason,
-                    record.totalPlannedRevenue.toFixed(2),
-                    record.totalRevenue.toFixed(2),
-                    record.totalCancelledRevenue.toFixed(2),
-                    record.teacherSalary.toFixed(2),
-                    record.timestamp
-                ]
-            ];
+    const values = [
+        [
+            record.date,
+            record.planned,
+            record.conducted,
+            record.cancelled,
+            JSON.stringify(record.plannedCosts),
+            JSON.stringify(record.conductedCosts),
+            JSON.stringify(record.cancelledCosts),
+            record.cancellationReason,
+            record.totalPlannedRevenue.toFixed(2),
+            record.totalRevenue.toFixed(2),
+            record.totalCancelledRevenue.toFixed(2),
+            record.teacherSalary.toFixed(2),
+            record.timestamp
+        ]
+    ];
 
-            const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SHEET_ID}/values/Sheet1!A:A:append?valueInputOption=RAW&key=${CONFIG.API_KEY}`;
-            
-            console.log('Отправка в Google Sheets:', url);
-            
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    values: values
-                })
-            });
+    // Используем более простой URL без указания диапазона, а с указанием листа и диапазона A1
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SHEET_ID}/values/Sheet1!A1:append?valueInputOption=RAW&key=${CONFIG.API_KEY}`;
 
-            if (!response.ok) {
-                throw new Error(`Google Sheets ошибка: ${response.status}`);
-            }
+    const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            values: values
+        })
+    });
 
-            console.log('Успешно сохранено в Google Sheets');
-            return await response.json();
-        }
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`Google Sheets ошибка ${response.status}: ${errorData.error?.message || 'Unknown error'}`);
+    }
+
+    return await response.json();
+}
 
         // Сохранить локально
         function saveToLocalStorage(record) {
