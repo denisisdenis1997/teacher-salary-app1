@@ -250,6 +250,49 @@
             padding: 0;
             border-radius: var(--radius-md);
         }
+
+        /* ===== TOGGLE STYLES ===== */
+        .toggle-btn {
+            background: none;
+            border: none;
+            color: var(--primary);
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: var(--font-weight-medium);
+            display: inline-flex;
+            align-items: center;
+            gap: var(--space-xs);
+            padding: var(--space-sm);
+            margin: var(--space-sm) 0;
+            border-radius: var(--radius-md);
+            transition: all 0.2s ease;
+        }
+
+        .toggle-btn:hover {
+            background: var(--border-light);
+        }
+
+        .toggle-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+            background: var(--border-light);
+            border-radius: var(--radius-lg);
+            margin: var(--space-md) 0;
+        }
+
+        .toggle-content.expanded {
+            max-height: 500px;
+            padding: var(--space-lg);
+        }
+
+        .toggle-icon {
+            transition: transform 0.3s ease;
+        }
+
+        .toggle-icon.expanded {
+            transform: rotate(180deg);
+        }
         
         /* ===== FORM ELEMENTS ===== */
         .form-group {
@@ -724,11 +767,6 @@
                     <div class="menu-icon">🔄</div>
                     <span>Синхронизация с GitHub</span>
                 </button>
-                
-                <button class="menu-btn" onclick="exportLocalData()">
-                    <div class="menu-icon">💾</div>
-                    <span>Экспорт локальных данных</span>
-                </button>
             </div>
         </div>
         
@@ -848,6 +886,27 @@
             </button>
             
             <h2 class="section-title">Прогноз зарплаты</h2>
+
+            <!-- Кнопка для показа/скрытия подсказки -->
+            <button class="toggle-btn" onclick="toggleForecastHelp()">
+                <span>ℹ️ Что делает этот раздел?</span>
+                <span class="toggle-icon">▼</span>
+            </button>
+
+            <!-- Скрытая подсказка -->
+            <div class="toggle-content" id="forecastHelp">
+                <div class="alert alert-info">
+                    <h4 style="margin-bottom: var(--space-sm);">🎯 Для чего нужен прогноз зарплаты?</h4>
+                    <p style="margin-bottom: var(--space-sm);">Этот раздел помогает спрогнозировать вашу будущую зарплату на основе:</p>
+                    <ul style="padding-left: var(--space-xl); margin-bottom: var(--space-sm);">
+                        <li>Ваших планов по количеству занятий</li>
+                        <li>Средней стоимости занятий</li>
+                        <li>Вашей исторической эффективности (КВП)</li>
+                    </ul>
+                    <p><strong>КВП (Коэффициент Выполнения Плана)</strong> - показывает, насколько эффективно вы выполняете планы. 
+                    Рассчитывается на основе ваших предыдущих результатов за выбранный период.</p>
+                </div>
+            </div>
             
             <div class="card">
                 <div class="card-header">
@@ -1092,6 +1151,15 @@
             
             console.log('🚀 Приложение загружено с новым дизайном!');
         });
+
+        // ========== ФУНКЦИЯ ДЛЯ ПОДСКАЗКИ ПРОГНОЗА ==========
+        function toggleForecastHelp() {
+            const helpContent = document.getElementById('forecastHelp');
+            const toggleIcon = document.querySelector('.toggle-icon');
+            
+            helpContent.classList.toggle('expanded');
+            toggleIcon.classList.toggle('expanded');
+        }
 
         // ========== GITHUB ФУНКЦИИ ==========
 
@@ -2144,26 +2212,6 @@
                 });
                 document.getElementById('recordsList').innerHTML = recordsHTML;
             }
-        }
-
-        // Экспорт локальных данных
-        function exportLocalData() {
-            const records = JSON.parse(localStorage.getItem('teacherRecords') || '[]');
-            
-            if (records.length === 0) {
-                alert('❌ Нет данных для экспорта');
-                return;
-            }
-
-            const dataStr = JSON.stringify(records, null, 2);
-            const dataBlob = new Blob([dataStr], {type: 'application/json'});
-            
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(dataBlob);
-            link.download = `salary_records_${new Date().toISOString().split('T')[0]}.json`;
-            link.click();
-            
-            alert(`✅ Экспортировано ${records.length} записей`);
         }
 
         // Рассчитать прогноз зарплаты
