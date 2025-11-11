@@ -966,6 +966,33 @@ input[type="number"].form-input {
                 font-size: 16px;
             }
         }
+        /* Исправление для отображения введенного текста на мобильных устройствах */
+.lesson-cost-input {
+    color: var(--text-primary) !important;
+    -webkit-text-fill-color: var(--text-primary) !important;
+    font-size: 17px !important;
+}
+
+/* Улучшение видимости плейсхолдера */
+.form-input::placeholder {
+    color: var(--text-muted);
+    font-size: 16px;
+    opacity: 0.7;
+}
+
+/* Исправление для Safari */
+@supports (-webkit-touch-callout: none) {
+    .form-input, .form-select {
+        font-size: 16px; /* Предотвращает масштабирование в iOS */
+    }
+    
+    input[type="number"], 
+    input[type="text"], 
+    input[type="date"] {
+        -webkit-appearance: none;
+        border-radius: var(--radius-lg);
+    }
+}
     </style>
 </head>
 <body>
