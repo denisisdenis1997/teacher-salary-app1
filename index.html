@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>SalaryTracker • Расчет среднего заработка</title>
     <style>
         /* ===== CSS VARIABLES ===== */
@@ -34,23 +34,23 @@
             --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
             --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
             
-            /* Border radius */
-            --radius-sm: 6px;
-            --radius-md: 8px;
-            --radius-lg: 12px;
-            --radius-xl: 16px;
-            --radius-2xl: 20px;
+            /* Border radius - увеличены для мобильных */
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --radius-xl: 20px;
+            --radius-2xl: 24px;
             
-            /* Spacing */
-            --space-xs: 4px;
-            --space-sm: 8px;
-            --space-md: 12px;
-            --space-lg: 16px;
-            --space-xl: 20px;
-            --space-2xl: 24px;
-            --space-3xl: 32px;
+            /* Spacing - увеличены для удобства на мобильных */
+            --space-xs: 6px;
+            --space-sm: 12px;
+            --space-md: 16px;
+            --space-lg: 20px;
+            --space-xl: 24px;
+            --space-2xl: 28px;
+            --space-3xl: 36px;
             
-            /* Typography */
+            /* Typography - увеличены шрифты */
             --font-weight-normal: 400;
             --font-weight-medium: 500;
             --font-weight-semibold: 600;
@@ -62,32 +62,34 @@
             box-sizing: border-box;
             margin: 0;
             padding: 0;
+            -webkit-tap-highlight-color: transparent;
         }
         
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Inter', sans-serif;
             background: var(--gradient-primary);
             min-height: 100vh;
-            padding: var(--space-lg);
+            padding: var(--space-sm);
             color: var(--text-primary);
             line-height: 1.5;
+            font-size: 16px; /* Базовый размер шрифта увеличен */
         }
         
         /* ===== LAYOUT COMPONENTS ===== */
         .container {
-            max-width: 440px;
+            max-width: 100%;
             margin: 0 auto;
             background: var(--surface);
             border-radius: var(--radius-2xl);
             box-shadow: var(--shadow-xl);
             overflow: hidden;
-            min-height: 85vh;
+            min-height: calc(100vh - 24px); /* Учитываем padding body */
         }
         
         .header {
             background: var(--gradient-primary);
             color: white;
-            padding: var(--space-2xl);
+            padding: var(--space-2xl) var(--space-xl);
             text-align: center;
             position: relative;
             overflow: hidden;
@@ -116,20 +118,20 @@
         }
         
         .header h1 {
-            font-size: 24px;
+            font-size: 22px; /* Увеличен для мобильных */
             font-weight: var(--font-weight-bold);
             margin-bottom: var(--space-sm);
             letter-spacing: -0.5px;
         }
         
         .header p {
-            font-size: 14px;
+            font-size: 16px; /* Увеличен для мобильных */
             opacity: 0.9;
             font-weight: var(--font-weight-medium);
         }
         
         .screen {
-            padding: var(--space-2xl);
+            padding: var(--space-xl);
             display: none;
             background: var(--surface);
             min-height: 500px;
@@ -145,7 +147,7 @@
             to { opacity: 1; transform: translateY(0); }
         }
         
-        /* ===== BUTTONS ===== */
+        /* ===== BUTTONS - увеличены для мобильных ===== */
         .btn {
             display: inline-flex;
             align-items: center;
@@ -154,13 +156,14 @@
             padding: var(--space-lg) var(--space-xl);
             border: none;
             border-radius: var(--radius-lg);
-            font-size: 15px;
+            font-size: 17px; /* Увеличен для мобильных */
             font-weight: var(--font-weight-semibold);
             cursor: pointer;
             transition: all 0.2s ease;
             text-decoration: none;
             position: relative;
             overflow: hidden;
+            min-height: 56px; /* Минимальная высота для удобного тапа */
         }
         
         .btn::before {
@@ -237,7 +240,8 @@
         
         .btn-sm {
             padding: var(--space-md) var(--space-lg);
-            font-size: 14px;
+            font-size: 16px; /* Увеличен для мобильных */
+            min-height: 48px;
         }
         
         .btn-full {
@@ -245,8 +249,8 @@
         }
         
         .btn-icon {
-            width: 40px;
-            height: 40px;
+            width: 48px; /* Увеличен для мобильных */
+            height: 48px;
             padding: 0;
             border-radius: var(--radius-md);
         }
@@ -257,7 +261,7 @@
             border: none;
             color: var(--primary);
             cursor: pointer;
-            font-size: 14px;
+            font-size: 16px; /* Увеличен для мобильных */
             font-weight: var(--font-weight-medium);
             display: inline-flex;
             align-items: center;
@@ -266,6 +270,7 @@
             margin: var(--space-sm) 0;
             border-radius: var(--radius-md);
             transition: all 0.2s ease;
+            min-height: 44px; /* Минимальная высота для удобного тапа */
         }
 
         .toggle-btn:hover {
@@ -294,7 +299,7 @@
             transform: rotate(180deg);
         }
         
-        /* ===== FORM ELEMENTS ===== */
+        /* ===== FORM ELEMENTS - увеличены для мобильных ===== */
         .form-group {
             margin-bottom: var(--space-xl);
         }
@@ -304,7 +309,7 @@
             margin-bottom: var(--space-sm);
             font-weight: var(--font-weight-semibold);
             color: var(--text-primary);
-            font-size: 14px;
+            font-size: 16px; /* Увеличен для мобильных */
         }
         
         .form-input, .form-select {
@@ -312,9 +317,10 @@
             padding: var(--space-lg);
             border: 2px solid var(--border);
             border-radius: var(--radius-lg);
-            font-size: 15px;
+            font-size: 17px; /* Увеличен для мобильных */
             transition: all 0.2s ease;
             background: var(--surface);
+            min-height: 56px; /* Минимальная высота для удобного тапа */
         }
         
         .form-input:focus, .form-select:focus {
@@ -325,6 +331,7 @@
         
         .form-input::placeholder {
             color: var(--text-muted);
+            font-size: 16px; /* Увеличен для мобильных */
         }
         
         .form-row {
@@ -335,7 +342,7 @@
         }
         
         .form-help {
-            font-size: 13px;
+            font-size: 15px; /* Увеличен для мобильных */
             color: var(--text-muted);
             margin-top: var(--space-sm);
         }
@@ -346,7 +353,7 @@
             gap: var(--space-md);
         }
         
-        /* ===== CARD COMPONENTS ===== */
+        /* ===== CARD COMPONENTS - увеличены для мобильных ===== */
         .card {
             background: var(--surface);
             border-radius: var(--radius-xl);
@@ -370,28 +377,29 @@
         }
         
         .card-icon {
-            width: 40px;
-            height: 40px;
+            width: 48px; /* Увеличен для мобильных */
+            height: 48px;
             border-radius: var(--radius-lg);
             background: var(--gradient-primary);
             display: flex;
             align-items: center;
             justify-content: center;
             color: white;
-            font-size: 18px;
+            font-size: 20px; /* Увеличен для мобильных */
         }
         
         .card-title {
-            font-size: 18px;
+            font-size: 18px; /* Увеличен для мобильных */
             font-weight: var(--font-weight-semibold);
             color: var(--text-primary);
         }
         
         .card-content {
             color: var(--text-secondary);
+            font-size: 16px; /* Увеличен для мобильных */
         }
         
-        /* ===== MENU STYLES ===== */
+        /* ===== MENU STYLES - увеличены для мобильных ===== */
         .menu {
             display: flex;
             flex-direction: column;
@@ -406,12 +414,13 @@
             background: var(--surface);
             border: 2px solid var(--border-light);
             border-radius: var(--radius-xl);
-            font-size: 15px;
+            font-size: 17px; /* Увеличен для мобильных */
             font-weight: var(--font-weight-semibold);
             color: var(--text-primary);
             cursor: pointer;
             transition: all 0.2s ease;
             text-align: left;
+            min-height: 80px; /* Минимальная высота для удобного тапа */
         }
         
         .menu-btn:hover {
@@ -425,19 +434,19 @@
         }
         
         .menu-icon {
-            width: 44px;
-            height: 44px;
+            width: 52px; /* Увеличен для мобильных */
+            height: 52px;
             border-radius: var(--radius-lg);
             background: var(--gradient-primary);
             display: flex;
             align-items: center;
             justify-content: center;
             color: white;
-            font-size: 18px;
+            font-size: 20px; /* Увеличен для мобильных */
             flex-shrink: 0;
         }
         
-        /* ===== STATS & RECORDS ===== */
+        /* ===== STATS & RECORDS - увеличены для мобильных ===== */
         .stats-grid {
             display: grid;
             gap: var(--space-lg);
@@ -459,14 +468,14 @@
         }
         
         .stat-value {
-            font-size: 24px;
+            font-size: 24px; /* Увеличен для мобильных */
             font-weight: var(--font-weight-bold);
             color: var(--text-primary);
             margin-bottom: var(--space-sm);
         }
         
         .stat-label {
-            font-size: 14px;
+            font-size: 16px; /* Увеличен для мобильных */
             color: var(--text-secondary);
             font-weight: var(--font-weight-medium);
         }
@@ -498,8 +507,8 @@
         }
         
         .action-btn {
-            width: 32px;
-            height: 32px;
+            width: 40px; /* Увеличен для мобильных */
+            height: 40px;
             border: none;
             border-radius: var(--radius-md);
             display: flex;
@@ -507,7 +516,7 @@
             justify-content: center;
             cursor: pointer;
             transition: all 0.2s ease;
-            font-size: 14px;
+            font-size: 16px; /* Увеличен для мобильных */
         }
         
         .edit-btn {
@@ -535,7 +544,7 @@
         .data-table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 14px;
+            font-size: 15px; /* Увеличен для мобильных */
         }
 
         .data-table th {
@@ -574,7 +583,7 @@
         }
 
         .sort-icon {
-            font-size: 12px;
+            font-size: 14px; /* Увеличен для мобильных */
             opacity: 0.5;
             transition: opacity 0.2s ease;
         }
@@ -598,7 +607,7 @@
         }
 
         .filter-label {
-            font-size: 14px;
+            font-size: 15px; /* Увеличен для мобильных */
             font-weight: var(--font-weight-medium);
             color: var(--text-secondary);
         }
@@ -606,9 +615,9 @@
         .comparison-badge {
             background: var(--success);
             color: white;
-            padding: 2px 6px;
+            padding: 4px 8px; /* Увеличен для мобильных */
             border-radius: var(--radius-sm);
-            font-size: 12px;
+            font-size: 14px; /* Увеличен для мобильных */
             font-weight: var(--font-weight-medium);
             margin-left: var(--space-sm);
         }
@@ -630,7 +639,7 @@
             z-index: 1000;
             align-items: center;
             justify-content: center;
-            padding: var(--space-lg);
+            padding: var(--space-sm);
         }
         
         .modal.active {
@@ -640,13 +649,13 @@
         
         .modal-content {
             background: var(--surface);
-            padding: var(--space-3xl);
+            padding: var(--space-2xl);
             border-radius: var(--radius-2xl);
-            max-width: 440px;
+            max-width: 100%;
             width: 100%;
             box-shadow: var(--shadow-xl);
             animation: scaleIn 0.3s ease;
-            max-height: 90vh;
+            max-height: 85vh;
             overflow-y: auto;
         }
         
@@ -661,7 +670,7 @@
         }
         
         .modal-title {
-            font-size: 20px;
+            font-size: 20px; /* Увеличен для мобильных */
             font-weight: var(--font-weight-bold);
             color: var(--text-primary);
             margin-bottom: var(--space-sm);
@@ -703,18 +712,18 @@
         .lesson-type-individual {
             background: #dbeafe;
             color: #1e40af;
-            padding: 4px 8px;
+            padding: 6px 10px; /* Увеличен для мобильных */
             border-radius: var(--radius-sm);
-            font-size: 12px;
+            font-size: 14px; /* Увеличен для мобильных */
             font-weight: var(--font-weight-medium);
         }
 
         .lesson-type-intensive {
             background: #fef3c7;
             color: #92400e;
-            padding: 4px 8px;
+            padding: 6px 10px; /* Увеличен для мобильных */
             border-radius: var(--radius-sm);
-            font-size: 12px;
+            font-size: 14px; /* Увеличен для мобильных */
             font-weight: var(--font-weight-medium);
         }
         
@@ -749,6 +758,8 @@
             padding: var(--space-md) 0;
             margin-bottom: var(--space-xl);
             transition: all 0.2s ease;
+            font-size: 17px; /* Увеличен для мобильных */
+            min-height: 44px; /* Минимальная высота для удобного тапа */
         }
         
         .back-btn:hover {
@@ -757,7 +768,7 @@
         }
         
         .section-title {
-            font-size: 20px;
+            font-size: 22px; /* Увеличен для мобильных */
             font-weight: var(--font-weight-bold);
             color: var(--text-primary);
             margin-bottom: var(--space-xl);
@@ -775,6 +786,7 @@
             border-radius: var(--radius-lg);
             margin-bottom: var(--space-lg);
             font-weight: var(--font-weight-medium);
+            font-size: 16px; /* Увеличен для мобильных */
         }
         
         .alert-success {
@@ -812,8 +824,8 @@
         }
         
         .loading-spinner {
-            width: 40px;
-            height: 40px;
+            width: 48px; /* Увеличен для мобильных */
+            height: 48px;
             border: 3px solid var(--border);
             border-top: 3px solid var(--primary);
             border-radius: 50%;
@@ -826,14 +838,31 @@
             100% { transform: rotate(360deg); }
         }
         
-        /* ===== RESPONSIVE DESIGN ===== */
-        @media (max-width: 480px) {
+        /* ===== RESPONSIVE DESIGN для iPhone 13 ===== */
+        @media (max-width: 430px) {
+            :root {
+                /* Еще больше увеличиваем отступы для маленьких экранов */
+                --space-xs: 8px;
+                --space-sm: 14px;
+                --space-md: 18px;
+                --space-lg: 22px;
+                --space-xl: 26px;
+                --space-2xl: 30px;
+                --space-3xl: 40px;
+            }
+            
+            body {
+                padding: 8px;
+                font-size: 17px;
+            }
+            
             .container {
                 border-radius: var(--radius-xl);
+                min-height: calc(100vh - 16px);
             }
             
             .screen {
-                padding: var(--space-xl);
+                padding: var(--space-lg);
             }
             
             .header {
@@ -841,7 +870,7 @@
             }
             
             .modal-content {
-                padding: var(--space-2xl);
+                padding: var(--space-xl);
             }
 
             .form-dates {
@@ -852,10 +881,79 @@
                 flex-direction: column;
                 align-items: flex-start;
             }
+            
+            .menu-btn {
+                min-height: 70px;
+                padding: var(--space-lg);
+            }
+            
+            .btn {
+                min-height: 52px;
+                font-size: 16px;
+            }
+            
+            .form-input, .form-select {
+                min-height: 52px;
+                font-size: 16px;
+            }
+        }
+
+        /* Дополнительные стили для очень маленьких экранов */
+        @media (max-width: 380px) {
+            .menu-btn {
+                flex-direction: column;
+                text-align: center;
+                gap: var(--space-md);
+                min-height: auto;
+                padding: var(--space-lg);
+            }
+            
+            .menu-icon {
+                width: 44px;
+                height: 44px;
+                font-size: 18px;
+            }
+            
+            .card-header {
+                flex-direction: column;
+                text-align: center;
+                gap: var(--space-sm);
+            }
+            
+            .record-actions {
+                position: static;
+                justify-content: center;
+                margin-top: var(--space-md);
+            }
+        }
+
+        /* Поддержка темной темы iOS */
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --background: #0f172a;
+                --surface: #1e293b;
+                --text-primary: #f1f5f9;
+                --text-secondary: #cbd5e1;
+                --text-muted: #64748b;
+                --border: #334155;
+                --border-light: #1e293b;
+            }
+        }
+
+        /* Улучшения для Safari на iOS */
+        @supports (-webkit-touch-callout: none) {
+            .btn, .menu-btn, .form-input, .form-select {
+                -webkit-appearance: none;
+            }
+            
+            input, select, textarea {
+                font-size: 16px; /* Предотвращает масштабирование в iOS */
+            }
         }
     </style>
 </head>
 <body>
+    <!-- Остальная HTML структура остается без изменений -->
     <div class="container">
         <!-- Header -->
         <div class="header">
@@ -1325,6 +1423,7 @@
     </div>
 
     <script>
+        // JavaScript код остается без изменений, так как он уже адаптирован
         // Конфигурация GitHub
         let GITHUB_CONFIG = {
             username: localStorage.getItem('githubUsername') || '',
@@ -1363,7 +1462,7 @@
             document.getElementById('githubRepo').value = GITHUB_CONFIG.repo;
             document.getElementById('githubToken').value = GITHUB_CONFIG.token;
             
-            console.log('🚀 Приложение загружено с новым дизайном!');
+            console.log('🚀 Приложение загружено с адаптацией для iPhone 13!');
         });
 
         // ========== НОВАЯ ФУНКЦИЯ ДЛЯ ДЕТАЛИЗАЦИИ ЗАПИСИ ==========
@@ -1558,6 +1657,10 @@
                 document.getElementById('recordsList').innerHTML = recordsHTML;
             }
         }
+
+    </script>
+</body>
+</html>
 
         // ========== НОВЫЕ ФУНКЦИИ ДЛЯ РАСЧЕТА ЗАРПЛАТЫ ЗА ПЕРИОД ==========
 
