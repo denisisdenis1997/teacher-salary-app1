@@ -993,6 +993,112 @@ input[type="number"].form-input {
         border-radius: var(--radius-lg);
     }
 }
+        /* ===== НОВЫЕ СТИЛИ ДЛЯ ПОЛЕЙ СТОИМОСТИ ===== */
+.cost-field-container {
+    background: var(--surface);
+    border: 2px solid var(--border-light);
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg);
+    margin-bottom: var(--space-md);
+    transition: all 0.2s ease;
+}
+
+.cost-field-container:hover {
+    border-color: var(--primary-light);
+}
+
+.cost-field-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-md);
+}
+
+.lesson-number {
+    font-weight: var(--font-weight-semibold);
+    color: var(--text-primary);
+    font-size: 16px;
+}
+
+.cost-field-inputs {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+}
+
+.cost-input-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+}
+
+.cost-label {
+    font-size: 14px;
+    font-weight: var(--font-weight-medium);
+    color: var(--text-secondary);
+    margin-bottom: 2px;
+}
+
+/* Улучшенные стили для полей ввода */
+.lesson-cost-input {
+    width: 100%;
+    padding: var(--space-md);
+    border: 2px solid var(--border);
+    border-radius: var(--radius-md);
+    font-size: 17px;
+    background: var(--surface);
+    color: var(--text-primary) !important;
+    -webkit-text-fill-color: var(--text-primary) !important;
+    min-height: 48px;
+    transition: all 0.2s ease;
+}
+
+.lesson-cost-input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.lesson-cost-input::placeholder {
+    color: var(--text-muted);
+    opacity: 0.7;
+}
+
+/* Исправления для мобильных устройств */
+@media (max-width: 430px) {
+    .cost-field-inputs {
+        gap: var(--space-lg);
+    }
+    
+    .lesson-cost-input {
+        font-size: 16px;
+        min-height: 44px;
+        padding: var(--space-md);
+    }
+    
+    .cost-field-container {
+        padding: var(--space-md);
+    }
+}
+
+/* Убираем стрелки у number input */
+.lesson-cost-input::-webkit-outer-spin-button,
+.lesson-cost-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.lesson-cost-input[type=number] {
+    -moz-appearance: textfield;
+}
+
+/* Исправление для Safari на iOS */
+@supports (-webkit-touch-callout: none) {
+    .lesson-cost-input {
+        font-size: 16px;
+        line-height: 1.4;
+    }
+}
     </style>
 </head>
 <body>
@@ -2075,40 +2181,51 @@ input[type="number"].form-input {
 
         // ========== ОБНОВЛЕННЫЕ ФУНКЦИИ ДЛЯ ТИПОВ ЗАНЯТИЙ ==========
 
-        // Добавить поле для стоимости занятия с типом
-        function addCostField() {
-            const container = document.getElementById('costsContainer');
-            const costId = 'cost_' + Date.now();
-            const lessonNumber = lessonCosts.length + 1;
-            
-            const costDiv = document.createElement('div');
-            costDiv.className = 'form-row';
-            costDiv.innerHTML = `
-                <span style="min-width: 30px;">${lessonNumber}.</span>
+    
+     // Добавить поле для стоимости занятия с типом
+function addCostField() {
+    const container = document.getElementById('costsContainer');
+    const costId = 'cost_' + Date.now();
+    const lessonNumber = lessonCosts.length + 1;
+    
+    const costDiv = document.createElement('div');
+    costDiv.className = 'cost-field-container';
+    costDiv.innerHTML = `
+        <div class="cost-field-header">
+            <span class="lesson-number">${lessonNumber}.</span>
+            <button type="button" class="action-btn delete-btn" onclick="removeCostField('${costId}')">×</button>
+        </div>
+        <div class="cost-field-inputs">
+            <div class="cost-input-group">
+                <label class="cost-label">Стоимость (руб.)</label>
                 <input type="number" 
                        class="form-input lesson-cost-input" 
                        id="${costId}" 
-                       placeholder="Стоимость занятия (руб.)" 
+                       placeholder="Введите стоимость" 
                        step="0.01" 
                        min="0"
-                       onchange="updateCancellationInterface()">
-                <select class="form-select" id="${costId}_type" style="width: 140px;">
+                       oninput="updateCancellationInterface()">
+            </div>
+            <div class="cost-input-group">
+                <label class="cost-label">Тип занятия</label>
+                <select class="form-select" id="${costId}_type">
                     <option value="individual">Индивидуальное</option>
                     <option value="intensive">Интенсив</option>
                 </select>
-                <button type="button" class="action-btn delete-btn" onclick="removeCostField('${costId}')">×</button>
-            `;
-            
-            container.appendChild(costDiv);
-            lessonCosts.push({ 
-                id: costId, 
-                value: 0,
-                cancelled: false,
-                type: 'individual'
-            });
-            
-            updateCancellationInterface();
-        }
+            </div>
+        </div>
+    `;
+    
+    container.appendChild(costDiv);
+    lessonCosts.push({ 
+        id: costId, 
+        value: 0,
+        cancelled: false,
+        type: 'individual'
+    });
+    
+    updateCancellationInterface();
+}
 
         // Обновить интерфейс отметки отмененных занятий
         function updateCancellationInterface() {
