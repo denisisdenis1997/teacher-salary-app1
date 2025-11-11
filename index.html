@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Расчет средней зарплаты</title>
     <style>
+        /* Стили остаются без изменений */
         * {
             box-sizing: border-box;
             margin: 0;
@@ -621,6 +622,8 @@
             const localData = localStorage.getItem('teacherRecords');
             if (localData) {
                 console.log('📂 Локальные данные загружены:', JSON.parse(localData).length, 'записей');
+            } else {
+                console.log('📂 Локальных данных нет');
             }
         }
 
@@ -1252,8 +1255,11 @@
 
         // Загрузить последние записи - ИСПРАВЛЕННАЯ ФУНКЦИЯ
         function loadRecentRecords() {
+            console.log('🔄 Загрузка последних записей...');
             const records = JSON.parse(localStorage.getItem('teacherRecords') || '[]');
             const container = document.getElementById('recordsList');
+            
+            console.log('📊 Найдено записей:', records.length);
             
             if (records.length === 0) {
                 container.innerHTML = `
@@ -1266,6 +1272,8 @@
 
             // Берем последние 10 записей и переворачиваем для отображения от новых к старым
             const recentRecords = records.slice(-10).reverse();
+            console.log('📋 Последние записи для отображения:', recentRecords);
+            
             let recordsHTML = '<div class="stats">';
             
             recentRecords.forEach(record => {
@@ -1283,6 +1291,7 @@
             
             recordsHTML += '</div>';
             container.innerHTML = recordsHTML;
+            console.log('✅ Записи успешно загружены');
         }
 
         // Рассчитать прогноз зарплаты
