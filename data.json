@@ -1,35 +1,46 @@
 [
   {
-    "date": "2025-11-10",
-    "planned": 8,
-    "conducted": 8,
+    "date": "2025-11-11",
+    "planned": 1,
+    "conducted": 1,
     "cancelled": 0,
     "plannedCosts": [
-      1100,
-      1200,
-      1100,
-      1100,
-      1350,
-      1350,
-      1350,
-      1350
+      1500
     ],
     "conductedCosts": [
-      1100,
-      1200,
-      1100,
-      1100,
-      1350,
-      1350,
-      1350,
-      1350
+      1500
     ],
     "cancelledCosts": [],
     "cancellationReason": "",
-    "totalPlannedRevenue": 9900,
-    "totalRevenue": 9900,
+    "totalPlannedRevenue": 1500,
+    "totalRevenue": 1500,
     "totalCancelledRevenue": 0,
-    "teacherSalary": 3960,
-    "timestamp": "2025-11-11T06:05:39.721Z"
+    "teacherSalary": 600,
+    "timestamp": "2025-11-11T05:59:56.607Z"
+  },
+  {
+    "date": "2025-11-11",
+    "planned": 2,
+    "conducted": 2,
+    "cancelled": 0,
+    "plannedCosts": [
+      1200,
+      1300
+    ],
+    "conductedCosts": [
+      1200,
+      1300
+    ],
+    "cancelledCosts": [],
+    "lessonTypes": [
+      "intensive",
+      "individual"
+    ],
+    "cancellationReason": "",
+    "totalPlannedRevenue": 2500,
+    "totalRevenue": 2500,
+    "totalCancelledRevenue": 0,
+    "teacherSalary": 1000,
+    "timestamp": "2025-11-11T09:53:14.739Z"
   }
 ]
