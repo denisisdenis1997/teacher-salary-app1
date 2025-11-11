@@ -1,0 +1,21 @@
+[
+  {
+    "date": "2025-11-11",
+    "planned": 1,
+    "conducted": 1,
+    "cancelled": 0,
+    "plannedCosts": [
+      1000
+    ],
+    "conductedCosts": [
+      1000
+    ],
+    "cancelledCosts": [],
+    "cancellationReason": "",
+    "totalPlannedRevenue": 1000,
+    "totalRevenue": 1000,
+    "totalCancelledRevenue": 0,
+    "teacherSalary": 400,
+    "timestamp": "2025-11-11T04:19:39.019Z"
+  }
+]
