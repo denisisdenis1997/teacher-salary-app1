@@ -339,6 +339,54 @@
             justify-content: center;
             margin-top: 20px;
         }
+        
+        /* Новые стили для записей с кнопкой удаления */
+        .record-item {
+            position: relative;
+            margin: 8px 0;
+            padding: 12px;
+            background: white;
+            border-radius: 6px;
+            border-left: 4px solid #667eea;
+            transition: all 0.3s ease;
+        }
+        
+        .record-item:hover {
+            background: #f7fafc;
+        }
+        
+        .delete-record-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: #fc8181;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+        
+        .delete-record-btn:hover {
+            background: #e53e3e;
+            transform: scale(1.1);
+        }
+        
+        .record-content {
+            padding-right: 30px;
+        }
+        
+        .btn-sm {
+            padding: 8px 16px;
+            font-size: 14px;
+            width: auto;
+        }
     </style>
 </head>
 <body>
@@ -508,7 +556,7 @@
         </div>
     </div>
 
-    <!-- Модальное окно подтверждения удаления -->
+    <!-- Модальное окно подтверждения удаления файла из GitHub -->
     <div class="modal" id="deleteModal">
         <div class="modal-content">
             <h3 style="margin-bottom: 15px; color: #e53e3e;">⚠️ Подтверждение удаления</h3>
@@ -519,6 +567,21 @@
             <div class="modal-actions">
                 <button class="btn btn-danger btn-sm" onclick="deleteGitHubFile()">🗑️ Да, удалить</button>
                 <button class="btn btn-secondary btn-sm" onclick="hideDeleteConfirmation()">Отмена</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно подтверждения удаления записи -->
+    <div class="modal" id="deleteRecordModal">
+        <div class="modal-content">
+            <h3 style="margin-bottom: 15px; color: #e53e3e;">⚠️ Подтверждение удаления</h3>
+            <p>Вы уверены, что хотите удалить запись от <strong id="deleteRecordDate"></strong>?</p>
+            <p style="color: #e53e3e; font-size: 14px; margin-top: 10px;">
+                ⚠️ Это действие нельзя отменить!
+            </p>
+            <div class="modal-actions">
+                <button class="btn btn-danger btn-sm" onclick="confirmDeleteRecord()">🗑️ Да, удалить</button>
+                <button class="btn btn-secondary btn-sm" onclick="hideDeleteRecordConfirmation()">Отмена</button>
             </div>
         </div>
     </div>
@@ -534,6 +597,9 @@
         // Массив для хранения стоимостей занятий
         let lessonCosts = [];
         let cancelledLessons = [];
+        
+        // Переменная для хранения записи, которую планируют удалить
+        let recordToDelete = null;
 
         // Инициализация
         document.addEventListener('DOMContentLoaded', function() {
@@ -765,7 +831,7 @@
             hideDeleteConfirmation();
         }
 
-        // Показать модальное окно подтверждения удаления
+        // Показать модальное окно подтверждения удаления файла из GitHub
         function showDeleteConfirmation() {
             if (!GITHUB_CONFIG.username || !GITHUB_CONFIG.token) {
                 document.getElementById('githubSyncStatus').innerHTML = 
@@ -775,9 +841,58 @@
             document.getElementById('deleteModal').classList.add('active');
         }
 
-        // Скрыть модальное окно подтверждения удаления
+        // Скрыть модальное окно подтверждения удаления файла из GitHub
         function hideDeleteConfirmation() {
             document.getElementById('deleteModal').classList.remove('active');
+        }
+
+        // Показать модальное окно подтверждения удаления записи
+        function showDeleteRecordConfirmation(record) {
+            recordToDelete = record;
+            document.getElementById('deleteRecordDate').textContent = record.date;
+            document.getElementById('deleteRecordModal').classList.add('active');
+        }
+
+        // Скрыть модальное окно подтверждения удаления записи
+        function hideDeleteRecordConfirmation() {
+            recordToDelete = null;
+            document.getElementById('deleteRecordModal').classList.remove('active');
+        }
+
+        // Подтвердить удаление записи
+        async function confirmDeleteRecord() {
+            if (!recordToDelete) {
+                hideDeleteRecordConfirmation();
+                return;
+            }
+
+            // Удаляем запись из локального хранилища
+            const records = JSON.parse(localStorage.getItem('teacherRecords') || '[]');
+            const updatedRecords = records.filter(record => 
+                !(record.date === recordToDelete.date && record.timestamp === recordToDelete.timestamp)
+            );
+            
+            localStorage.setItem('teacherRecords', JSON.stringify(updatedRecords));
+            
+            // Синхронизируем с GitHub
+            if (GITHUB_CONFIG.username && GITHUB_CONFIG.token) {
+                try {
+                    await saveToGitHub();
+                    console.log('✅ Запись удалена и синхронизирована с GitHub');
+                } catch (error) {
+                    console.error('❌ Ошибка синхронизации с GitHub:', error);
+                }
+            }
+            
+            // Обновляем список записей
+            loadRecentRecords();
+            
+            // Показываем сообщение об успехе
+            document.getElementById('recordsList').innerHTML = 
+                '<div class="success">✅ Запись успешно удалена!</div>' + 
+                document.getElementById('recordsList').innerHTML;
+            
+            hideDeleteRecordConfirmation();
         }
 
         // Ручная синхронизация
@@ -1240,7 +1355,7 @@
             document.getElementById('statsContent').innerHTML = statsHTML;
         }
 
-        // Загрузить последние записи
+        // Загрузить последние записи (с кнопками удаления)
         function loadRecentRecords() {
             const records = JSON.parse(localStorage.getItem('teacherRecords') || '[]');
             const recentRecords = records.slice(-10).reverse();
@@ -1255,11 +1370,14 @@
                 let recordsHTML = '<div class="stats">';
                 recentRecords.forEach(record => {
                     recordsHTML += `
-                        <div class="stat-item">
-                            <strong>${record.date}</strong><br>
-                            📚 ${record.conducted}/${record.planned} занятий<br>
-                            ${record.cancelled > 0 ? `❌ Отменено: ${record.cancelled}<br>` : ''}
-                            💵 Зарплата: <strong>${record.teacherSalary.toFixed(2)} руб.</strong>
+                        <div class="record-item">
+                            <button class="delete-record-btn" onclick="showDeleteRecordConfirmation(${JSON.stringify(record).replace(/"/g, '&quot;')})">×</button>
+                            <div class="record-content">
+                                <strong>${record.date}</strong><br>
+                                📚 ${record.conducted}/${record.planned} занятий<br>
+                                ${record.cancelled > 0 ? `❌ Отменено: ${record.cancelled}<br>` : ''}
+                                💵 Зарплата: <strong>${record.teacherSalary.toFixed(2)} руб.</strong>
+                            </div>
                         </div>
                     `;
                 });
