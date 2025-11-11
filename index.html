@@ -313,32 +313,32 @@
         }
         
         .form-input, .form-select {
-    width: 100%;
-    padding: var(--space-lg);
-    border: 2px solid var(--border);
-    border-radius: var(--radius-lg);
-    font-size: 17px;
-    transition: all 0.2s ease;
-    background: var(--surface);
-    min-height: 56px;
-    color: var(--text-primary); /* Добавлено: цвет текста */
-    -webkit-text-fill-color: var(--text-primary); /* Добавлено: для Safari */
-}
+            width: 100%;
+            padding: var(--space-lg);
+            border: 2px solid var(--border);
+            border-radius: var(--radius-lg);
+            font-size: 17px;
+            transition: all 0.2s ease;
+            background: var(--surface);
+            min-height: 56px;
+            color: var(--text-primary);
+            -webkit-text-fill-color: var(--text-primary);
+        }
 
-/* Специальные стили для полей ввода чисел */
-input[type="number"].form-input {
-    color: var(--text-primary);
-    -webkit-text-fill-color: var(--text-primary);
-}
+        /* Специальные стили для полей ввода чисел */
+        input[type="number"].form-input {
+            color: var(--text-primary);
+            -webkit-text-fill-color: var(--text-primary);
+        }
 
-/* Убираем автозаполнение стилей в Safari */
-.form-input:-webkit-autofill,
-.form-input:-webkit-autofill:hover, 
-.form-input:-webkit-autofill:focus {
-    -webkit-text-fill-color: var(--text-primary);
-    -webkit-box-shadow: 0 0 0px 1000px var(--surface) inset;
-    transition: background-color 5000s ease-in-out 0s;
-}
+        /* Убираем автозаполнение стилей в Safari */
+        .form-input:-webkit-autofill,
+        .form-input:-webkit-autofill:hover, 
+        .form-input:-webkit-autofill:focus {
+            -webkit-text-fill-color: var(--text-primary);
+            -webkit-box-shadow: 0 0 0px 1000px var(--surface) inset;
+            transition: background-color 5000s ease-in-out 0s;
+        }
         
         .form-input:focus, .form-select:focus {
             outline: none;
@@ -349,6 +349,7 @@ input[type="number"].form-input {
         .form-input::placeholder {
             color: var(--text-muted);
             font-size: 16px;
+            opacity: 0.7;
         }
         
         .form-row {
@@ -855,6 +856,88 @@ input[type="number"].form-input {
             100% { transform: rotate(360deg); }
         }
         
+        /* ===== НОВЫЕ СТИЛИ ДЛЯ ПОЛЕЙ СТОИМОСТИ ===== */
+        .cost-field-container {
+            background: var(--surface);
+            border: 2px solid var(--border-light);
+            border-radius: var(--radius-lg);
+            padding: var(--space-lg);
+            margin-bottom: var(--space-md);
+            transition: all 0.2s ease;
+        }
+
+        .cost-field-container:hover {
+            border-color: var(--primary-light);
+        }
+
+        .cost-field-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--space-md);
+        }
+
+        .lesson-number {
+            font-weight: var(--font-weight-semibold);
+            color: var(--text-primary);
+            font-size: 16px;
+        }
+
+        .cost-field-inputs {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-md);
+        }
+
+        .cost-input-group {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-sm);
+        }
+
+        .cost-label {
+            font-size: 14px;
+            font-weight: var(--font-weight-medium);
+            color: var(--text-secondary);
+            margin-bottom: 2px;
+        }
+
+        /* Улучшенные стили для полей ввода */
+        .lesson-cost-input {
+            width: 100%;
+            padding: var(--space-md);
+            border: 2px solid var(--border);
+            border-radius: var(--radius-md);
+            font-size: 17px;
+            background: var(--surface);
+            color: var(--text-primary) !important;
+            -webkit-text-fill-color: var(--text-primary) !important;
+            min-height: 48px;
+            transition: all 0.2s ease;
+        }
+
+        .lesson-cost-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        .lesson-cost-input::placeholder {
+            color: var(--text-muted);
+            opacity: 0.7;
+        }
+
+        /* Убираем стрелки у number input */
+        .lesson-cost-input::-webkit-outer-spin-button,
+        .lesson-cost-input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        .lesson-cost-input[type=number] {
+            -moz-appearance: textfield;
+        }
+        
         /* ===== RESPONSIVE DESIGN для iPhone 13 ===== */
         @media (max-width: 430px) {
             :root {
@@ -912,6 +995,21 @@ input[type="number"].form-input {
                 min-height: 52px;
                 font-size: 16px;
             }
+
+            /* Адаптация для полей стоимости */
+            .cost-field-inputs {
+                gap: var(--space-lg);
+            }
+            
+            .lesson-cost-input {
+                font-size: 16px;
+                min-height: 44px;
+                padding: var(--space-md);
+            }
+            
+            .cost-field-container {
+                padding: var(--space-md);
+            }
         }
 
         /* Дополнительные стили для очень маленьких экранов */
@@ -956,7 +1054,7 @@ input[type="number"].form-input {
             }
         }
 
-        /* Улучшения для Safari на iOS */
+        /* Исправление для Safari на iOS */
         @supports (-webkit-touch-callout: none) {
             .btn, .menu-btn, .form-input, .form-select {
                 -webkit-appearance: none;
@@ -965,140 +1063,12 @@ input[type="number"].form-input {
             input, select, textarea {
                 font-size: 16px;
             }
+
+            .lesson-cost-input {
+                font-size: 16px;
+                line-height: 1.4;
+            }
         }
-        /* Исправление для отображения введенного текста на мобильных устройствах */
-.lesson-cost-input {
-    color: var(--text-primary) !important;
-    -webkit-text-fill-color: var(--text-primary) !important;
-    font-size: 17px !important;
-}
-
-/* Улучшение видимости плейсхолдера */
-.form-input::placeholder {
-    color: var(--text-muted);
-    font-size: 16px;
-    opacity: 0.7;
-}
-
-/* Исправление для Safari */
-@supports (-webkit-touch-callout: none) {
-    .form-input, .form-select {
-        font-size: 16px; /* Предотвращает масштабирование в iOS */
-    }
-    
-    input[type="number"], 
-    input[type="text"], 
-    input[type="date"] {
-        -webkit-appearance: none;
-        border-radius: var(--radius-lg);
-    }
-}
-        /* ===== НОВЫЕ СТИЛИ ДЛЯ ПОЛЕЙ СТОИМОСТИ ===== */
-.cost-field-container {
-    background: var(--surface);
-    border: 2px solid var(--border-light);
-    border-radius: var(--radius-lg);
-    padding: var(--space-lg);
-    margin-bottom: var(--space-md);
-    transition: all 0.2s ease;
-}
-
-.cost-field-container:hover {
-    border-color: var(--primary-light);
-}
-
-.cost-field-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: var(--space-md);
-}
-
-.lesson-number {
-    font-weight: var(--font-weight-semibold);
-    color: var(--text-primary);
-    font-size: 16px;
-}
-
-.cost-field-inputs {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-md);
-}
-
-.cost-input-group {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-sm);
-}
-
-.cost-label {
-    font-size: 14px;
-    font-weight: var(--font-weight-medium);
-    color: var(--text-secondary);
-    margin-bottom: 2px;
-}
-
-/* Улучшенные стили для полей ввода */
-.lesson-cost-input {
-    width: 100%;
-    padding: var(--space-md);
-    border: 2px solid var(--border);
-    border-radius: var(--radius-md);
-    font-size: 17px;
-    background: var(--surface);
-    color: var(--text-primary) !important;
-    -webkit-text-fill-color: var(--text-primary) !important;
-    min-height: 48px;
-    transition: all 0.2s ease;
-}
-
-.lesson-cost-input:focus {
-    outline: none;
-    border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
-}
-
-.lesson-cost-input::placeholder {
-    color: var(--text-muted);
-    opacity: 0.7;
-}
-
-/* Исправления для мобильных устройств */
-@media (max-width: 430px) {
-    .cost-field-inputs {
-        gap: var(--space-lg);
-    }
-    
-    .lesson-cost-input {
-        font-size: 16px;
-        min-height: 44px;
-        padding: var(--space-md);
-    }
-    
-    .cost-field-container {
-        padding: var(--space-md);
-    }
-}
-
-/* Убираем стрелки у number input */
-.lesson-cost-input::-webkit-outer-spin-button,
-.lesson-cost-input::-webkit-inner-spin-button {
-    -webkit-appearance: none;
-    margin: 0;
-}
-
-.lesson-cost-input[type=number] {
-    -moz-appearance: textfield;
-}
-
-/* Исправление для Safari на iOS */
-@supports (-webkit-touch-callout: none) {
-    .lesson-cost-input {
-        font-size: 16px;
-        line-height: 1.4;
-    }
-}
     </style>
 </head>
 <body>
@@ -1176,9 +1146,9 @@ input[type="number"].form-input {
                     <div id="costsContainer" class="mb-lg">
                         <!-- Динамически добавляемые поля стоимости -->
                     </div>
-                   <button type="button" class="btn btn-secondary btn-sm btn-full" onclick="addCostField()" style="padding: 12px 16px; font-size: 14px;">
-    + Добавить занятие
-</button>
+                    <button type="button" class="btn btn-secondary btn-full" onclick="addCostField()">
+                        + Добавить занятие
+                    </button>
                 </div>
             </div>
             
@@ -2181,51 +2151,50 @@ input[type="number"].form-input {
 
         // ========== ОБНОВЛЕННЫЕ ФУНКЦИИ ДЛЯ ТИПОВ ЗАНЯТИЙ ==========
 
-    
-     // Добавить поле для стоимости занятия с типом
-function addCostField() {
-    const container = document.getElementById('costsContainer');
-    const costId = 'cost_' + Date.now();
-    const lessonNumber = lessonCosts.length + 1;
-    
-    const costDiv = document.createElement('div');
-    costDiv.className = 'cost-field-container';
-    costDiv.innerHTML = `
-        <div class="cost-field-header">
-            <span class="lesson-number">${lessonNumber}.</span>
-            <button type="button" class="action-btn delete-btn" onclick="removeCostField('${costId}')">×</button>
-        </div>
-        <div class="cost-field-inputs">
-            <div class="cost-input-group">
-                <label class="cost-label">Стоимость (руб.)</label>
-                <input type="number" 
-                       class="form-input lesson-cost-input" 
-                       id="${costId}" 
-                       placeholder="Введите стоимость" 
-                       step="0.01" 
-                       min="0"
-                       oninput="updateCancellationInterface()">
-            </div>
-            <div class="cost-input-group">
-                <label class="cost-label">Тип занятия</label>
-                <select class="form-select" id="${costId}_type">
-                    <option value="individual">Индивидуальное</option>
-                    <option value="intensive">Интенсив</option>
-                </select>
-            </div>
-        </div>
-    `;
-    
-    container.appendChild(costDiv);
-    lessonCosts.push({ 
-        id: costId, 
-        value: 0,
-        cancelled: false,
-        type: 'individual'
-    });
-    
-    updateCancellationInterface();
-}
+        // Добавить поле для стоимости занятия с типом
+        function addCostField() {
+            const container = document.getElementById('costsContainer');
+            const costId = 'cost_' + Date.now();
+            const lessonNumber = lessonCosts.length + 1;
+            
+            const costDiv = document.createElement('div');
+            costDiv.className = 'cost-field-container';
+            costDiv.innerHTML = `
+                <div class="cost-field-header">
+                    <span class="lesson-number">${lessonNumber}.</span>
+                    <button type="button" class="action-btn delete-btn" onclick="removeCostField('${costId}')">×</button>
+                </div>
+                <div class="cost-field-inputs">
+                    <div class="cost-input-group">
+                        <label class="cost-label">Стоимость (руб.)</label>
+                        <input type="number" 
+                               class="form-input lesson-cost-input" 
+                               id="${costId}" 
+                               placeholder="Введите стоимость" 
+                               step="0.01" 
+                               min="0"
+                               oninput="updateCancellationInterface()">
+                    </div>
+                    <div class="cost-input-group">
+                        <label class="cost-label">Тип занятия</label>
+                        <select class="form-select" id="${costId}_type">
+                            <option value="individual">Индивидуальное</option>
+                            <option value="intensive">Интенсив</option>
+                        </select>
+                    </div>
+                </div>
+            `;
+            
+            container.appendChild(costDiv);
+            lessonCosts.push({ 
+                id: costId, 
+                value: 0,
+                cancelled: false,
+                type: 'individual'
+            });
+            
+            updateCancellationInterface();
+        }
 
         // Обновить интерфейс отметки отмененных занятий
         function updateCancellationInterface() {
@@ -2663,22 +2632,32 @@ function addCostField() {
             const costId = 'edit_cost_' + Date.now();
             
             const costDiv = document.createElement('div');
-            costDiv.className = 'form-row';
+            costDiv.className = 'cost-field-container';
             costDiv.innerHTML = `
-                <span style="min-width: 30px;">${editLessonCosts.length + 1}.</span>
-                <input type="number" 
-                       class="form-input lesson-cost-input" 
-                       id="${costId}" 
-                       placeholder="Стоимость занятия (руб.)" 
-                       step="0.01" 
-                       min="0"
-                       value="${cost}"
-                       onchange="updateEditCancellationInterface()">
-                <select class="form-select" id="${costId}_type" style="width: 140px;">
-                    <option value="individual" ${type === 'individual' ? 'selected' : ''}>Индивидуальное</option>
-                    <option value="intensive" ${type === 'intensive' ? 'selected' : ''}>Интенсив</option>
-                </select>
-                <button type="button" class="action-btn delete-btn" onclick="removeEditCostField('${costId}')">×</button>
+                <div class="cost-field-header">
+                    <span class="lesson-number">${editLessonCosts.length + 1}.</span>
+                    <button type="button" class="action-btn delete-btn" onclick="removeEditCostField('${costId}')">×</button>
+                </div>
+                <div class="cost-field-inputs">
+                    <div class="cost-input-group">
+                        <label class="cost-label">Стоимость (руб.)</label>
+                        <input type="number" 
+                               class="form-input lesson-cost-input" 
+                               id="${costId}" 
+                               placeholder="Введите стоимость" 
+                               step="0.01" 
+                               min="0"
+                               value="${cost}"
+                               oninput="updateEditCancellationInterface()">
+                    </div>
+                    <div class="cost-input-group">
+                        <label class="cost-label">Тип занятия</label>
+                        <select class="form-select" id="${costId}_type">
+                            <option value="individual" ${type === 'individual' ? 'selected' : ''}>Индивидуальное</option>
+                            <option value="intensive" ${type === 'intensive' ? 'selected' : ''}>Интенсив</option>
+                        </select>
+                    </div>
+                </div>
             `;
             
             container.appendChild(costDiv);
