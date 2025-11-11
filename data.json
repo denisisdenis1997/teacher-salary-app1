@@ -7,9 +7,9 @@
     "plannedCosts": [
       1100,
       1200,
+      1200,
       1100,
       1100,
-      1350,
       1350,
       1350,
       1350
@@ -17,20 +17,30 @@
     "conductedCosts": [
       1100,
       1200,
+      1200,
       1100,
       1100,
-      1350,
       1350,
       1350,
       1350
     ],
     "cancelledCosts": [],
     "cancellationReason": "",
-    "totalPlannedRevenue": 9900,
-    "totalRevenue": 9900,
+    "totalPlannedRevenue": 9750,
+    "totalRevenue": 9750,
     "totalCancelledRevenue": 0,
-    "teacherSalary": 3960,
-    "timestamp": "2025-11-11T06:05:39.721Z"
+    "teacherSalary": 3900,
+    "timestamp": "2025-11-11T06:05:39.721Z",
+    "lessonTypes": [
+      "individual",
+      "individual",
+      "individual",
+      "individual",
+      "individual",
+      "individual",
+      "individual",
+      "individual"
+    ]
   },
   {
     "date": "2025-11-11",
