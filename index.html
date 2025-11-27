@@ -321,23 +321,6 @@
             transition: all 0.2s ease;
             background: var(--surface);
             min-height: 56px;
-            color: var(--text-primary);
-            -webkit-text-fill-color: var(--text-primary);
-        }
-
-        /* Специальные стили для полей ввода чисел */
-        input[type="number"].form-input {
-            color: var(--text-primary);
-            -webkit-text-fill-color: var(--text-primary);
-        }
-
-        /* Убираем автозаполнение стилей в Safari */
-        .form-input:-webkit-autofill,
-        .form-input:-webkit-autofill:hover, 
-        .form-input:-webkit-autofill:focus {
-            -webkit-text-fill-color: var(--text-primary);
-            -webkit-box-shadow: 0 0 0px 1000px var(--surface) inset;
-            transition: background-color 5000s ease-in-out 0s;
         }
         
         .form-input:focus, .form-select:focus {
@@ -349,7 +332,6 @@
         .form-input::placeholder {
             color: var(--text-muted);
             font-size: 16px;
-            opacity: 0.7;
         }
         
         .form-row {
@@ -856,88 +838,6 @@
             100% { transform: rotate(360deg); }
         }
         
-        /* ===== НОВЫЕ СТИЛИ ДЛЯ ПОЛЕЙ СТОИМОСТИ ===== */
-        .cost-field-container {
-            background: var(--surface);
-            border: 2px solid var(--border-light);
-            border-radius: var(--radius-lg);
-            padding: var(--space-lg);
-            margin-bottom: var(--space-md);
-            transition: all 0.2s ease;
-        }
-
-        .cost-field-container:hover {
-            border-color: var(--primary-light);
-        }
-
-        .cost-field-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: var(--space-md);
-        }
-
-        .lesson-number {
-            font-weight: var(--font-weight-semibold);
-            color: var(--text-primary);
-            font-size: 16px;
-        }
-
-        .cost-field-inputs {
-            display: flex;
-            flex-direction: column;
-            gap: var(--space-md);
-        }
-
-        .cost-input-group {
-            display: flex;
-            flex-direction: column;
-            gap: var(--space-sm);
-        }
-
-        .cost-label {
-            font-size: 14px;
-            font-weight: var(--font-weight-medium);
-            color: var(--text-secondary);
-            margin-bottom: 2px;
-        }
-
-        /* Улучшенные стили для полей ввода */
-        .lesson-cost-input {
-            width: 100%;
-            padding: var(--space-md);
-            border: 2px solid var(--border);
-            border-radius: var(--radius-md);
-            font-size: 17px;
-            background: var(--surface);
-            color: var(--text-primary) !important;
-            -webkit-text-fill-color: var(--text-primary) !important;
-            min-height: 48px;
-            transition: all 0.2s ease;
-        }
-
-        .lesson-cost-input:focus {
-            outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
-        }
-
-        .lesson-cost-input::placeholder {
-            color: var(--text-muted);
-            opacity: 0.7;
-        }
-
-        /* Убираем стрелки у number input */
-        .lesson-cost-input::-webkit-outer-spin-button,
-        .lesson-cost-input::-webkit-inner-spin-button {
-            -webkit-appearance: none;
-            margin: 0;
-        }
-
-        .lesson-cost-input[type=number] {
-            -moz-appearance: textfield;
-        }
-        
         /* ===== RESPONSIVE DESIGN для iPhone 13 ===== */
         @media (max-width: 430px) {
             :root {
@@ -995,21 +895,6 @@
                 min-height: 52px;
                 font-size: 16px;
             }
-
-            /* Адаптация для полей стоимости */
-            .cost-field-inputs {
-                gap: var(--space-lg);
-            }
-            
-            .lesson-cost-input {
-                font-size: 16px;
-                min-height: 44px;
-                padding: var(--space-md);
-            }
-            
-            .cost-field-container {
-                padding: var(--space-md);
-            }
         }
 
         /* Дополнительные стили для очень маленьких экранов */
@@ -1054,7 +939,7 @@
             }
         }
 
-        /* Исправление для Safari на iOS */
+        /* Улучшения для Safari на iOS */
         @supports (-webkit-touch-callout: none) {
             .btn, .menu-btn, .form-input, .form-select {
                 -webkit-appearance: none;
@@ -1062,11 +947,6 @@
             
             input, select, textarea {
                 font-size: 16px;
-            }
-
-            .lesson-cost-input {
-                font-size: 16px;
-                line-height: 1.4;
             }
         }
     </style>
@@ -1146,7 +1026,7 @@
                     <div id="costsContainer" class="mb-lg">
                         <!-- Динамически добавляемые поля стоимости -->
                     </div>
-                    <button type="button" class="btn btn-secondary btn-full" onclick="addCostField()">
+                    <button type="button" class="btn btn-secondary btn-sm btn-full" onclick="addCostField()" style="padding: 12px 16px; font-size: 14px;">
                         + Добавить занятие
                     </button>
                 </div>
@@ -1163,7 +1043,11 @@
                     </div>
                     <div class="form-group">
                         <label class="form-label">Причина отмены</label>
-                        <input type="text" id="cancellationReason" class="form-input" placeholder="Укажите причину отмены">
+                        <select id="cancellationReason" class="form-select">
+                            <option value="">Выберите причину отмены</option>
+                            <option value="Больничный/отпуск">Больничный/отпуск</option>
+                            <option value="Отменено">Отменено</option>
+                        </select>
                     </div>
                 </div>
             </div>
@@ -1256,6 +1140,7 @@
                     </ul>
                     <p><strong>КВП (Коэффициент Выполнения Плана)</strong> - показывает, насколько эффективно вы выполняете планы. 
                     Рассчитывается на основе ваших предыдущих результатов за выбранный период.</p>
+                    <p><strong>Важно:</strong> В расчете КВП не учитываются занятия, отмененные по причине "Больничный/отпуск".</p>
                 </div>
             </div>
             
@@ -1479,7 +1364,7 @@
                         <!-- Здесь будут поля для редактирования стоимостей -->
                     </div>
                     <button type="button" class="btn btn-secondary btn-full mt-md" onclick="addEditCostField()">
-                        + Добавить стоимость занятия
+                        + Добавить занятие
                     </button>
                 </div>
             </div>
@@ -1494,7 +1379,11 @@
                 </div>
                 <div class="form-group">
                     <label class="form-label">Причина отмены</label>
-                    <input type="text" id="editCancellationReason" class="form-input" placeholder="Укажите причину отмены">
+                    <select id="editCancellationReason" class="form-select">
+                        <option value="">Выберите причину отмены</option>
+                        <option value="Больничный/отпуск">Больничный/отпуск</option>
+                        <option value="Отменено">Отменено</option>
+                    </select>
                 </div>
             </div>
             
@@ -2158,31 +2047,22 @@
             const lessonNumber = lessonCosts.length + 1;
             
             const costDiv = document.createElement('div');
-            costDiv.className = 'cost-field-container';
+            costDiv.className = 'form-row';
             costDiv.innerHTML = `
-                <div class="cost-field-header">
-                    <span class="lesson-number">${lessonNumber}.</span>
-                    <button type="button" class="action-btn delete-btn" onclick="removeCostField('${costId}')">×</button>
-                </div>
-                <div class="cost-field-inputs">
-                    <div class="cost-input-group">
-                        <label class="cost-label">Стоимость (руб.)</label>
-                        <input type="number" 
-                               class="form-input lesson-cost-input" 
-                               id="${costId}" 
-                               placeholder="Введите стоимость" 
-                               step="0.01" 
-                               min="0"
-                               oninput="updateCancellationInterface()">
-                    </div>
-                    <div class="cost-input-group">
-                        <label class="cost-label">Тип занятия</label>
-                        <select class="form-select" id="${costId}_type">
-                            <option value="individual">Индивидуальное</option>
-                            <option value="intensive">Интенсив</option>
-                        </select>
-                    </div>
-                </div>
+                <span style="min-width: 30px;">${lessonNumber}.</span>
+                <input type="number" 
+                       class="form-input lesson-cost-input" 
+                       id="${costId}" 
+                       placeholder="Стоимость (руб.)" 
+                       step="0.01" 
+                       min="0"
+                       style="width: 120px;"
+                       onchange="updateCancellationInterface()">
+                <select class="form-select" id="${costId}_type" style="width: 140px;">
+                    <option value="individual">Индивидуальное</option>
+                    <option value="intensive">Интенсив</option>
+                </select>
+                <button type="button" class="action-btn delete-btn" onclick="removeCostField('${costId}')" style="width: 44px; height: 44px; font-size: 20px; display: flex; align-items: center; justify-content: center;">×</button>
             `;
             
             container.appendChild(costDiv);
@@ -2632,32 +2512,23 @@
             const costId = 'edit_cost_' + Date.now();
             
             const costDiv = document.createElement('div');
-            costDiv.className = 'cost-field-container';
+            costDiv.className = 'form-row';
             costDiv.innerHTML = `
-                <div class="cost-field-header">
-                    <span class="lesson-number">${editLessonCosts.length + 1}.</span>
-                    <button type="button" class="action-btn delete-btn" onclick="removeEditCostField('${costId}')">×</button>
-                </div>
-                <div class="cost-field-inputs">
-                    <div class="cost-input-group">
-                        <label class="cost-label">Стоимость (руб.)</label>
-                        <input type="number" 
-                               class="form-input lesson-cost-input" 
-                               id="${costId}" 
-                               placeholder="Введите стоимость" 
-                               step="0.01" 
-                               min="0"
-                               value="${cost}"
-                               oninput="updateEditCancellationInterface()">
-                    </div>
-                    <div class="cost-input-group">
-                        <label class="cost-label">Тип занятия</label>
-                        <select class="form-select" id="${costId}_type">
-                            <option value="individual" ${type === 'individual' ? 'selected' : ''}>Индивидуальное</option>
-                            <option value="intensive" ${type === 'intensive' ? 'selected' : ''}>Интенсив</option>
-                        </select>
-                    </div>
-                </div>
+                <span style="min-width: 30px;">${editLessonCosts.length + 1}.</span>
+                <input type="number" 
+                       class="form-input lesson-cost-input" 
+                       id="${costId}" 
+                       placeholder="Стоимость (руб.)" 
+                       step="0.01" 
+                       min="0"
+                       value="${cost}"
+                       style="width: 120px;"
+                       onchange="updateEditCancellationInterface()">
+                <select class="form-select" id="${costId}_type" style="width: 140px;">
+                    <option value="individual" ${type === 'individual' ? 'selected' : ''}>Индивидуальное</option>
+                    <option value="intensive" ${type === 'intensive' ? 'selected' : ''}>Интенсив</option>
+                </select>
+                <button type="button" class="action-btn delete-btn" onclick="removeEditCostField('${costId}')" style="width: 44px; height: 44px; font-size: 20px; display: flex; align-items: center; justify-content: center;">×</button>
             `;
             
             container.appendChild(costDiv);
@@ -2986,7 +2857,8 @@
                   'Где:\n' +
                   '• Фактическая зарплата = проведенные занятия × 40% от стоимости\n' +
                   '• Плановая зарплата = запланированные занятия × стоимость\n\n' +
-                  'КВП 100% = план выполнен полностью');
+                  'КВП 100% = план выполнен полностью\n\n' +
+                  'Важно: В расчете КВП не учитываются занятия, отмененные по причине "Больничный/отпуск".');
         }
 
         // Показать определенный экран
@@ -3219,7 +3091,7 @@
             document.getElementById('statsContent').innerHTML = statsHTML;
         }
 
-        // Рассчитать прогноз зарплаты
+        // Рассчитать прогноз зарплаты с учетом отмен по больничному/отпуску
         function calculateForecast() {
             const planned = parseInt(document.getElementById('forecastPlanned').value);
             const cost = parseFloat(document.getElementById('forecastCost').value);
@@ -3247,8 +3119,17 @@
                 let totalTeacherSalary = 0;
 
                 periodRecords.forEach(record => {
-                    totalPlannedRevenue += record.totalPlannedRevenue;
-                    totalTeacherSalary += record.teacherSalary;
+                    // Исключаем отмены по причине "Больничный/отпуск" из расчета КВП
+                    let adjustedPlannedRevenue = record.totalPlannedRevenue;
+                    let adjustedTeacherSalary = record.teacherSalary;
+                    
+                    // Если есть отмены по причине "Больничный/отпуск", корректируем плановую выручку
+                    if (record.cancellationReason === 'Больничный/отпуск' && record.cancelled > 0) {
+                        adjustedPlannedRevenue = record.totalPlannedRevenue - record.totalCancelledRevenue;
+                    }
+                    
+                    totalPlannedRevenue += adjustedPlannedRevenue;
+                    totalTeacherSalary += adjustedTeacherSalary;
                 });
 
                 historicalKVP = totalPlannedRevenue > 0 ? (totalTeacherSalary / (totalPlannedRevenue * 0.4)) * 100 : 75;
@@ -3266,7 +3147,7 @@
                     </div>
                     <div class="stat-item">
                         <div class="stat-value">${historicalKVP.toFixed(1)}%</div>
-                        <div class="stat-label">Ваш КВП</div>
+                        <div class="stat-label">Ваш КВП (без учета больничных)</div>
                     </div>
                     <div class="stat-item">
                         <div class="stat-value">${plannedRevenue.toFixed(2)} руб.</div>
@@ -3280,6 +3161,9 @@
                         <div class="stat-value" style="color: var(--success);">${forecastSalary.toFixed(2)} руб.</div>
                         <div class="stat-label">Прогноз зарплаты</div>
                     </div>
+                </div>
+                <div class="alert alert-info mt-lg">
+                    💡 В расчете КВП не учитываются занятия, отмененные по причине "Больничный/отпуск".
                 </div>
             `;
         }
