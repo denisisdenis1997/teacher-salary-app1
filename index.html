@@ -949,6 +949,22 @@
                 font-size: 16px;
             }
         }
+
+        /* Стили для причины отмены */
+        .cancellation-reason {
+            margin-top: var(--space-sm);
+            padding: var(--space-sm);
+            background: var(--border-light);
+            border-radius: var(--radius-md);
+        }
+
+        .cancellation-reason select {
+            width: 100%;
+            padding: var(--space-sm);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            background: var(--surface);
+        }
     </style>
 </head>
 <body>
@@ -1039,15 +1055,7 @@
                 </div>
                 <div class="card-content">
                     <div id="cancellationContainer" class="mb-lg">
-                        <!-- Здесь появятся занятия для отметки отмен -->
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Причина отмены</label>
-                        <select id="cancellationReason" class="form-select">
-                            <option value="">Выберите причину отмены</option>
-                            <option value="Больничный/отпуск">Больничный/отпуск</option>
-                            <option value="Отменено">Отменено</option>
-                        </select>
+                        <!-- Здесь появятся занятия для отметки отмен с полями причин -->
                     </div>
                 </div>
             </div>
@@ -1377,14 +1385,6 @@
                 <div id="editCancellationContainer" class="mb-lg">
                     <!-- Здесь появятся занятия для отметки отмен -->
                 </div>
-                <div class="form-group">
-                    <label class="form-label">Причина отмены</label>
-                    <select id="editCancellationReason" class="form-select">
-                        <option value="">Выберите причину отмены</option>
-                        <option value="Больничный/отпуск">Больничный/отпуск</option>
-                        <option value="Отменено">Отменено</option>
-                    </select>
-                </div>
             </div>
             
             <div class="card" id="editSalaryCalculation" style="display: none;">
@@ -1439,7 +1439,6 @@
 
         // Массив для хранения стоимостей занятий
         let lessonCosts = [];
-        let cancelledLessons = [];
         
         // Переменные для хранения записей
         let recordToDelete = null;
@@ -1471,200 +1470,628 @@
             console.log('🚀 Приложение загружено с адаптацией для iPhone 13!');
         });
 
-        // ========== НОВАЯ ФУНКЦИЯ ДЛЯ ДЕТАЛИЗАЦИИ ЗАПИСИ ==========
+        // ========== ОСНОВНЫЕ ФУНКЦИИ ПРИЛОЖЕНИЯ ==========
 
-        function showRecordDetails(record) {
-            const modal = document.getElementById('recordDetailsModal');
-            const content = document.getElementById('recordDetailsContent');
+        // Показать alert сообщение
+        function showAlert(containerId, message, type) {
+            const alertClass = {
+                'success': 'alert-success',
+                'error': 'alert-error', 
+                'info': 'alert-info',
+                'warning': 'alert-warning'
+            }[type] || 'alert-info';
             
-            // Форматируем дату
-            const recordDate = new Date(record.date);
-            const formattedDate = recordDate.toLocaleDateString('ru-RU', {
-                day: '2-digit',
-                month: '2-digit',
-                year: 'numeric'
+            document.getElementById(containerId).innerHTML = 
+                `<div class="alert ${alertClass}">${message}</div>`;
+        }
+
+        // Загрузить локальные данные
+        function loadLocalData() {
+            const localData = localStorage.getItem('teacherRecords');
+            if (localData) {
+                console.log('📂 Локальные данные загружены:', JSON.parse(localData).length, 'записей');
+            }
+        }
+
+        // Показать определенный экран
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(screen => {
+                screen.classList.remove('active');
+            });
+            document.getElementById(screenId).classList.add('active');
+            
+            if (screenId === 'githubSyncScreen') {
+                document.getElementById('githubUsername').value = GITHUB_CONFIG.username;
+                document.getElementById('githubRepo').value = GITHUB_CONFIG.repo;
+                document.getElementById('githubToken').value = GITHUB_CONFIG.token;
+            }
+            
+            if (screenId === 'statsScreen') {
+                loadStats(3);
+            } else if (screenId === 'recordsScreen') {
+                loadRecentRecords();
+            }
+        }
+
+        // ========== ФУНКЦИИ ДЛЯ СТОИМОСТЕЙ ЗАНЯТИЙ ==========
+
+        // Добавить поле для стоимости занятия с типом
+        function addCostField() {
+            const container = document.getElementById('costsContainer');
+            const costId = 'cost_' + Date.now();
+            const lessonNumber = lessonCosts.length + 1;
+            
+            const costDiv = document.createElement('div');
+            costDiv.className = 'form-row';
+            costDiv.innerHTML = `
+                <span style="min-width: 30px;">${lessonNumber}.</span>
+                <input type="number" 
+                       class="form-input lesson-cost-input" 
+                       id="${costId}" 
+                       placeholder="Стоимость (руб.)" 
+                       step="0.01" 
+                       min="0"
+                       style="width: 120px;"
+                       onchange="updateCancellationInterface()">
+                <select class="form-select" id="${costId}_type" style="width: 140px;">
+                    <option value="individual">Индивидуальное</option>
+                    <option value="intensive">Интенсив</option>
+                </select>
+                <button type="button" class="action-btn delete-btn" onclick="removeCostField('${costId}')" style="width: 44px; height: 44px; font-size: 20px; display: flex; align-items: center; justify-content: center;">×</button>
+            `;
+            
+            container.appendChild(costDiv);
+            lessonCosts.push({ 
+                id: costId, 
+                value: 0,
+                cancelled: false,
+                cancellationReason: '',
+                type: 'individual'
             });
             
-            // Создаем HTML для детализации
-            let detailsHTML = `
-                <div class="card">
-                    <div class="card-header">
-                        <div class="card-icon">📅</div>
-                        <div class="card-title">Дата: ${formattedDate}</div>
-                    </div>
-                    <div class="card-content">
-                        <div class="stat-value">${record.conducted}/${record.planned} занятий</div>
-                        ${record.cancelled > 0 ? 
-                            `<div class="stat-label">❌ Отменено: ${record.cancelled} занятий</div>` : 
-                            ''}
-                    </div>
-                </div>
-                
-                <div class="card">
-                    <div class="card-header">
-                        <div class="card-icon">💰</div>
-                        <div class="card-title">Финансовые показатели</div>
-                    </div>
-                    <div class="card-content">
-                        <div class="stats-grid">
-                            <div class="stat-item">
-                                <div class="stat-value">${record.totalPlannedRevenue.toFixed(2)} руб.</div>
-                                <div class="stat-label">Плановая выручка</div>
-                            </div>
-                            <div class="stat-item">
-                                <div class="stat-value">${record.totalRevenue.toFixed(2)} руб.</div>
-                                <div class="stat-label">Фактическая выручка</div>
-                            </div>
-                            <div class="stat-item" style="border-left-color: var(--success);">
-                                <div class="stat-value" style="color: var(--success);">${record.teacherSalary.toFixed(2)} руб.</div>
-                                <div class="stat-label">Зарплата (40%)</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-            
-            // Добавляем информацию об отмененных занятиях, если они есть
-            if (record.cancelled > 0 && record.cancellationReason) {
-                detailsHTML += `
-                    <div class="card">
-                        <div class="card-header">
-                            <div class="card-icon">❌</div>
-                            <div class="card-title">Информация об отменах</div>
-                        </div>
-                        <div class="card-content">
-                            <div class="stat-label"><strong>Причина отмены:</strong> ${record.cancellationReason}</div>
-                            <div class="stat-label mt-md"><strong>Сумма отмен:</strong> ${record.totalCancelledRevenue.toFixed(2)} руб.</div>
-                        </div>
-                    </div>
-                `;
+            updateCancellationInterface();
+        }
+
+        // Удалить поле стоимости
+        function removeCostField(costId) {
+            const field = document.getElementById(costId);
+            if (field) {
+                field.parentElement.remove();
             }
+            lessonCosts = lessonCosts.filter(cost => cost.id !== costId);
+            updateCancellationInterface();
+        }
+
+        // Обновить интерфейс отметки отмененных занятий
+        function updateCancellationInterface() {
+            const cancellationSection = document.getElementById('cancellationSection');
+            const cancellationContainer = document.getElementById('cancellationContainer');
             
-            // Добавляем детали по занятиям
-            detailsHTML += `
-                <div class="card">
-                    <div class="card-header">
-                        <div class="card-icon">📚</div>
-                        <div class="card-title">Детализация занятий</div>
-                    </div>
-                    <div class="card-content">
-            `;
+            // Обновляем значения из полей ввода
+            lessonCosts.forEach((costItem, index) => {
+                const field = document.getElementById(costItem.id);
+                const typeField = document.getElementById(costItem.id + '_type');
+                if (field) {
+                    costItem.value = parseFloat(field.value) || 0;
+                }
+                if (typeField) {
+                    costItem.type = typeField.value;
+                }
+            });
             
-            if (record.plannedCosts && record.plannedCosts.length > 0) {
-                record.plannedCosts.forEach((cost, index) => {
-                    const isCancelled = record.cancelledCosts && record.cancelledCosts.includes(cost);
-                    const lessonType = record.lessonTypes && record.lessonTypes[index] ? record.lessonTypes[index] : 'individual';
-                    const typeClass = lessonType === 'individual' ? 'lesson-type-individual' : 'lesson-type-intensive';
-                    const typeLabel = lessonType === 'individual' ? 'Индивидуальное' : 'Интенсив';
-                    
-                    detailsHTML += `
-                        <div class="cost-item ${isCancelled ? 'cancelled' : ''}">
+            const hasValidLessons = lessonCosts.some(cost => cost.value > 0);
+            
+            if (hasValidLessons) {
+                cancellationSection.style.display = 'block';
+                
+                cancellationContainer.innerHTML = '';
+                lessonCosts.forEach((costItem, index) => {
+                    if (costItem.value > 0) {
+                        const typeLabel = costItem.type === 'individual' ? 'Индивидуальное' : 'Интенсив';
+                        const typeClass = costItem.type === 'individual' ? 'lesson-type-individual' : 'lesson-type-intensive';
+                        
+                        const lessonDiv = document.createElement('div');
+                        lessonDiv.className = `cost-item ${costItem.cancelled ? 'cancelled' : ''}`;
+                        lessonDiv.innerHTML = `
                             <div class="cost-details">
-                                <div class="flex justify-between items-center">
-                                    <div>
-                                        <strong>Занятие ${index + 1}:</strong> ${cost.toFixed(2)} руб.
-                                        <span class="${typeClass}">${typeLabel}</span>
+                                <input type="checkbox" 
+                                       class="cost-checkbox" 
+                                       id="cancel_${costItem.id}"
+                                       ${costItem.cancelled ? 'checked' : ''}
+                                       onchange="toggleCancellation('${costItem.id}', ${index})">
+                                <label for="cancel_${costItem.id}">
+                                    Занятие ${index + 1}: <strong>${costItem.value.toFixed(2)} руб.</strong>
+                                    <span class="${typeClass}">${typeLabel}</span>
+                                    ${costItem.cancelled ? ' (❌ Отменено)' : ''}
+                                </label>
+                                ${costItem.cancelled ? `
+                                    <div class="cancellation-reason">
+                                        <label>Причина отмены:</label>
+                                        <select id="reason_${costItem.id}" onchange="updateCancellationReason('${costItem.id}', this.value)">
+                                            <option value="">Выберите причину</option>
+                                            <option value="Больничный/отпуск" ${costItem.cancellationReason === 'Больничный/отпуск' ? 'selected' : ''}>Больничный/отпуск</option>
+                                            <option value="Отменено" ${costItem.cancellationReason === 'Отменено' ? 'selected' : ''}>Отменено</option>
+                                        </select>
                                     </div>
-                                    <div>
-                                        ${isCancelled ? 
-                                            '<span style="color: var(--error);">❌ Отменено</span>' : 
-                                            '<span style="color: var(--success);">✅ Проведено</span>'}
-                                    </div>
-                                </div>
+                                ` : ''}
                             </div>
-                        </div>
-                    `;
+                        `;
+                        cancellationContainer.appendChild(lessonDiv);
+                    }
                 });
             } else {
-                detailsHTML += `<div class="stat-label">Нет информации о занятиях</div>`;
+                cancellationSection.style.display = 'none';
             }
             
-            detailsHTML += `</div></div>`;
+            updateSalaryCalculation();
+        }
+
+        // Обновить причину отмены для конкретного занятия
+        function updateCancellationReason(costId, reason) {
+            const costItem = lessonCosts.find(cost => cost.id === costId);
+            if (costItem) {
+                costItem.cancellationReason = reason;
+            }
+        }
+
+        // Переключить статус отмены занятия
+        function toggleCancellation(costId, index) {
+            const checkbox = document.getElementById(`cancel_${costId}`);
+            lessonCosts[index].cancelled = checkbox.checked;
             
-            // Добавляем информацию о времени создания
-            if (record.timestamp) {
-                const createdDate = new Date(record.timestamp);
-                const formattedCreated = createdDate.toLocaleDateString('ru-RU', {
-                    day: '2-digit',
-                    month: '2-digit',
-                    year: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                });
+            // Сбрасываем причину отмены при снятии отметки
+            if (!lessonCosts[index].cancelled) {
+                lessonCosts[index].cancellationReason = '';
+            }
+            
+            updateCancellationInterface();
+        }
+
+        // Обновить расчет зарплаты
+        function updateSalaryCalculation() {
+            const conductedLessons = lessonCosts.filter(cost => cost.value > 0 && !cost.cancelled);
+            const cancelledLessons = lessonCosts.filter(cost => cost.value > 0 && cost.cancelled);
+            
+            if (conductedLessons.length > 0 || cancelledLessons.length > 0) {
+                const totalPlannedRevenue = lessonCosts
+                    .filter(cost => cost.value > 0)
+                    .reduce((sum, cost) => sum + cost.value, 0);
+                    
+                const totalRevenue = conductedLessons.reduce((sum, cost) => sum + cost.value, 0);
+                const totalCancelledRevenue = cancelledLessons.reduce((sum, cost) => sum + cost.value, 0);
+                const teacherSalary = totalRevenue * 0.4;
+                
+                document.getElementById('salaryCalculation').style.display = 'block';
+                
+                let detailsHTML = `
+                    <div class="stat-item">
+                        📊 Всего запланировано: <strong>${lessonCosts.filter(cost => cost.value > 0).length} занятий</strong>
+                    </div>
+                    <div class="stat-item">
+                        ✅ Проведено: <strong>${conductedLessons.length} занятий</strong>
+                    </div>
+                `;
+                
+                if (cancelledLessons.length > 0) {
+                    detailsHTML += `
+                        <div class="stat-item">
+                            ❌ Отменено: <strong>${cancelledLessons.length} занятий</strong>
+                        </div>
+                    `;
+                }
                 
                 detailsHTML += `
-                    <div class="card">
-                        <div class="card-header">
-                            <div class="card-icon">⏰</div>
-                            <div class="card-title">Информация о записи</div>
-                        </div>
-                        <div class="card-content">
-                            <div class="stat-label">Создано: ${formattedCreated}</div>
+                    <div style="background: #fff5f5; padding: var(--space-lg); border-radius: var(--radius-lg); margin-top: var(--space-md);">
+                        <div>💰 Общая выручка: <strong>${totalRevenue.toFixed(2)} руб.</strong></div>
+                        <div style="color: var(--text-primary); font-weight: var(--font-weight-bold); margin-top: var(--space-sm);">
+                            💵 Зарплата (40%): <strong>${teacherSalary.toFixed(2)} руб.</strong>
                         </div>
                     </div>
                 `;
+                
+                document.getElementById('calculationDetails').innerHTML = detailsHTML;
+            } else {
+                document.getElementById('salaryCalculation').style.display = 'none';
+            }
+        }
+
+        // Добавить запись с учетом типов занятий и причин отмен
+        async function addRecord() {
+            const date = document.getElementById('recordDate').value || new Date().toISOString().split('T')[0];
+
+            const plannedLessons = [];
+            const conductedLessons = [];
+            const cancelledLessons = [];
+            const lessonTypes = [];
+            const cancellationReasons = [];
+            
+            lessonCosts.forEach((costItem, index) => {
+                const field = document.getElementById(costItem.id);
+                if (field && costItem.value > 0) {
+                    const lessonData = {
+                        number: index + 1,
+                        cost: costItem.value,
+                        cancelled: costItem.cancelled,
+                        cancellationReason: costItem.cancellationReason,
+                        type: costItem.type
+                    };
+                    
+                    plannedLessons.push(lessonData);
+                    lessonTypes.push(costItem.type);
+                    
+                    if (costItem.cancelled) {
+                        cancelledLessons.push(lessonData);
+                        cancellationReasons.push(costItem.cancellationReason);
+                    } else {
+                        conductedLessons.push(lessonData);
+                    }
+                }
+            });
+
+            if (plannedLessons.length === 0) {
+                showAlert('addRecordStatus', '❌ Добавьте хотя бы одно занятие с стоимостью', 'error');
+                return;
+            }
+
+            const totalPlannedRevenue = plannedLessons.reduce((sum, lesson) => sum + lesson.cost, 0);
+            const totalRevenue = conductedLessons.reduce((sum, lesson) => sum + lesson.cost, 0);
+            const totalCancelledRevenue = cancelledLessons.reduce((sum, lesson) => sum + lesson.cost, 0);
+            const teacherSalary = totalRevenue * 0.4;
+            const timestamp = new Date().toISOString();
+
+            const record = {
+                date: date,
+                planned: plannedLessons.length,
+                conducted: conductedLessons.length,
+                cancelled: cancelledLessons.length,
+                plannedCosts: plannedLessons.map(l => l.cost),
+                conductedCosts: conductedLessons.map(l => l.cost),
+                cancelledCosts: cancelledLessons.map(l => l.cost),
+                lessonTypes: lessonTypes,
+                cancellationReasons: cancellationReasons,
+                totalPlannedRevenue: totalPlannedRevenue,
+                totalRevenue: totalRevenue,
+                totalCancelledRevenue: totalCancelledRevenue,
+                teacherSalary: teacherSalary,
+                timestamp: timestamp
+            };
+
+            saveToLocalStorage(record);
+            
+            if (GITHUB_CONFIG.username && GITHUB_CONFIG.token) {
+                try {
+                    await saveToGitHub();
+                    showAlert('addRecordStatus', '✅ Запись сохранена и синхронизирована с GitHub!', 'success');
+                } catch (error) {
+                    showAlert('addRecordStatus', `✅ Запись сохранена локально (GitHub: ${error.message})`, 'success');
+                }
+            } else {
+                showAlert('addRecordStatus', '✅ Запись сохранена локально!', 'success');
             }
             
-            content.innerHTML = detailsHTML;
-            modal.classList.add('active');
+            // Сброс формы
+            document.getElementById('salaryCalculation').style.display = 'none';
+            document.getElementById('cancellationSection').style.display = 'none';
+            
+            const costsContainer = document.getElementById('costsContainer');
+            costsContainer.innerHTML = '';
+            lessonCosts = [];
+            addCostField();
+            
+            setTimeout(() => showScreen('mainMenu'), 2000);
         }
 
-        function hideRecordDetailsModal() {
-            document.getElementById('recordDetailsModal').classList.remove('active');
-        }
-
-        // ========== ОБНОВЛЕННАЯ ФУНКЦИЯ ЗАГРУЗКИ ПОСЛЕДНИХ ЗАПИСЕЙ ==========
-
-        function loadRecentRecords() {
+        // Сохранить локально
+        function saveToLocalStorage(record) {
             const records = JSON.parse(localStorage.getItem('teacherRecords') || '[]');
-            const recentRecords = records.slice(-10).reverse();
+            records.push(record);
+            localStorage.setItem('teacherRecords', JSON.stringify(records));
+            console.log('💾 Сохранено локально, всего записей:', records.length);
+        }
 
-            if (recentRecords.length === 0) {
-                document.getElementById('recordsList').innerHTML = `
+        // ========== ФУНКЦИИ СТАТИСТИКИ ==========
+
+        // Показать статистику
+        function showStats(months) {
+            showScreen('statsScreen');
+        }
+
+        // Загрузить статистику из локального хранилища
+        function loadStats(months) {
+            const records = JSON.parse(localStorage.getItem('teacherRecords') || '[]');
+            
+            if (records.length === 0) {
+                document.getElementById('statsContent').innerHTML = `
                     <div class="alert alert-info">
-                        📋 Нет сохраненных записей. Добавьте первую запись.
+                        📊 Нет данных для статистики. Добавьте несколько записей.
                     </div>
                 `;
-            } else {
-                let recordsHTML = '';
-                recentRecords.forEach(record => {
-                    // Форматируем дату для отображения
-                    const recordDate = new Date(record.date);
-                    const formattedDate = recordDate.toLocaleDateString('ru-RU', {
-                        day: '2-digit',
-                        month: '2-digit',
-                        year: 'numeric'
-                    });
-                    
-                    recordsHTML += `
-                        <div class="record-item" onclick="showRecordDetails(${JSON.stringify(record).replace(/"/g, '&quot;')})">
-                            <div class="record-actions">
-                                <button class="action-btn edit-btn" onclick="event.stopPropagation(); showEditRecordModal(${JSON.stringify(record).replace(/"/g, '&quot;')})">
-                                    ✏️
-                                </button>
-                                <button class="action-btn delete-btn" onclick="event.stopPropagation(); showDeleteRecordConfirmation(${JSON.stringify(record).replace(/"/g, '&quot;')})">
-                                    ×
-                                </button>
-                            </div>
-                            <div class="record-content">
-                                <div class="stat-value">${formattedDate}</div>
-                                <div class="stat-label">
-                                    📚 ${record.conducted}/${record.planned} занятий
-                                    ${record.cancelled > 0 ? ` • ❌ ${record.cancelled} отменено` : ''}
-                                </div>
-                                <div class="stat-value" style="color: var(--success);">${record.teacherSalary.toFixed(2)} руб.</div>
-                                <div class="stat-label" style="margin-top: var(--space-sm); font-size: 12px; color: var(--text-muted);">
-                                    👆 Нажмите для деталей
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                });
-                document.getElementById('recordsList').innerHTML = recordsHTML;
+                return;
             }
+
+            const endDate = new Date();
+            const startDate = new Date();
+            startDate.setMonth(endDate.getMonth() - months);
+
+            const periodRecords = records.filter(record => {
+                const recordDate = new Date(record.date);
+                return recordDate >= startDate && recordDate <= endDate;
+            });
+
+            if (periodRecords.length === 0) {
+                document.getElementById('statsContent').innerHTML = '<div class="alert alert-info">Нет данных за указанный период</div>';
+                return;
+            }
+
+            let totalPlanned = 0;
+            let totalConducted = 0;
+            let totalCancelled = 0;
+            let totalPlannedRevenue = 0;
+            let totalActualRevenue = 0;
+            let totalTeacherSalary = 0;
+
+            periodRecords.forEach(record => {
+                totalPlanned += record.planned;
+                totalConducted += record.conducted;
+                totalCancelled += record.cancelled;
+                totalPlannedRevenue += record.totalPlannedRevenue;
+                totalActualRevenue += record.totalRevenue;
+                totalTeacherSalary += record.teacherSalary;
+            });
+
+            const avgMonthlySalary = totalTeacherSalary / months;
+            const kvp = totalPlannedRevenue > 0 ? (totalTeacherSalary / (totalPlannedRevenue * 0.4)) * 100 : 0;
+            const cancellationRate = totalPlanned > 0 ? (totalCancelled / totalPlanned) * 100 : 0;
+
+            let statsHTML = `
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-value">${periodRecords.length}</div>
+                        <div class="stat-label">Всего записей</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${totalPlanned}</div>
+                        <div class="stat-label">Занятий запланировано</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${totalConducted}</div>
+                        <div class="stat-label">Занятий проведено</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${totalCancelled}</div>
+                        <div class="stat-label">Занятий отменено</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${cancellationRate.toFixed(1)}%</div>
+                        <div class="stat-label">Процент отмен</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${totalActualRevenue.toFixed(2)} руб.</div>
+                        <div class="stat-label">Общая выручка</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${totalTeacherSalary.toFixed(2)} руб.</div>
+                        <div class="stat-label">Общая зарплата (40%)</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${avgMonthlySalary.toFixed(2)} руб.</div>
+                        <div class="stat-label">Средняя зарплата в месяц</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${kvp.toFixed(1)}%</div>
+                        <div class="stat-label">КВП</div>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('statsContent').innerHTML = statsHTML;
         }
 
-        // ========== НОВЫЕ ФУНКЦИИ ДЛЯ РАСЧЕТА ЗАРПЛАТЫ ЗА ПЕРИОД ==========
+        // Показать кастомную статистику
+        function showCustomStats() {
+            const months = document.getElementById('customMonths').value;
+            const container = document.getElementById('customStatsContent');
+            
+            if (!months || months < 1) {
+                showAlert('customStatsContent', '❌ Введите корректное количество месяцев', 'error');
+                return;
+            }
+            
+            container.innerHTML = '<div class="loading"><div class="loading-spinner"></div><div>Загрузка статистики...</div></div>';
+            
+            const records = JSON.parse(localStorage.getItem('teacherRecords') || '[]');
+            
+            if (records.length === 0) {
+                container.innerHTML = `
+                    <div class="alert alert-info">
+                        📊 Нет данных для статистики. Добавьте несколько записей.
+                    </div>
+                `;
+                return;
+            }
+
+            const endDate = new Date();
+            const startDate = new Date();
+            startDate.setMonth(endDate.getMonth() - months);
+
+            const periodRecords = records.filter(record => {
+                const recordDate = new Date(record.date);
+                return recordDate >= startDate && recordDate <= endDate;
+            });
+
+            if (periodRecords.length === 0) {
+                container.innerHTML = '<div class="alert alert-info">Нет данных за указанный период</div>';
+                return;
+            }
+
+            let totalPlanned = 0;
+            let totalConducted = 0;
+            let totalCancelled = 0;
+            let totalPlannedRevenue = 0;
+            let totalActualRevenue = 0;
+            let totalTeacherSalary = 0;
+
+            periodRecords.forEach(record => {
+                totalPlanned += record.planned;
+                totalConducted += record.conducted;
+                totalCancelled += record.cancelled;
+                totalPlannedRevenue += record.totalPlannedRevenue;
+                totalActualRevenue += record.totalRevenue;
+                totalTeacherSalary += record.teacherSalary;
+            });
+
+            const avgMonthlySalary = totalTeacherSalary / months;
+            const kvp = totalPlannedRevenue > 0 ? (totalTeacherSalary / (totalPlannedRevenue * 0.4)) * 100 : 0;
+            const cancellationRate = totalPlanned > 0 ? (totalCancelled / totalPlanned) * 100 : 0;
+
+            let statsHTML = `
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-value">${periodRecords.length}</div>
+                        <div class="stat-label">Всего записей</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${totalPlanned}</div>
+                        <div class="stat-label">Занятий запланировано</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${totalConducted}</div>
+                        <div class="stat-label">Занятий проведено</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${totalCancelled}</div>
+                        <div class="stat-label">Занятий отменено</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${cancellationRate.toFixed(1)}%</div>
+                        <div class="stat-label">Процент отмен</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${totalActualRevenue.toFixed(2)} руб.</div>
+                        <div class="stat-label">Общая выручка</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${totalTeacherSalary.toFixed(2)} руб.</div>
+                        <div class="stat-label">Общая зарплата (40%)</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${avgMonthlySalary.toFixed(2)} руб.</div>
+                        <div class="stat-label">Средняя зарплата в месяц</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${kvp.toFixed(1)}%</div>
+                        <div class="stat-label">КВП</div>
+                    </div>
+                </div>
+            `;
+
+            container.innerHTML = statsHTML;
+        }
+
+        // ========== ФУНКЦИИ ПРОГНОЗА ==========
+
+        // Функция для подсказки прогноза
+        function toggleForecastHelp() {
+            const helpContent = document.getElementById('forecastHelp');
+            const toggleIcon = document.querySelector('.toggle-icon');
+            
+            helpContent.classList.toggle('expanded');
+            toggleIcon.classList.toggle('expanded');
+        }
+
+        // Показать подсказку по КВП
+        function showKVPHelp() {
+            alert('КВП (Коэффициент Выполнения Плана) - показывает эффективность работы.\n\n' +
+                  'Формула расчета:\n' +
+                  'КВП = (Фактическая зарплата × 100%) / (Плановая зарплата × 40%)\n\n' +
+                  'Где:\n' +
+                  '• Фактическая зарплата = проведенные занятия × 40% от стоимости\n' +
+                  '• Плановая зарплата = запланированные занятия × стоимость\n\n' +
+                  'КВП 100% = план выполнен полностью\n\n' +
+                  'Важно: В расчете КВП не учитываются занятия, отмененные по причине "Больничный/отпуск".');
+        }
+
+        // Рассчитать прогноз зарплаты с учетом отмен по больничному/отпуску
+        function calculateForecast() {
+            const planned = parseInt(document.getElementById('forecastPlanned').value);
+            const cost = parseFloat(document.getElementById('forecastCost').value);
+            const months = parseInt(document.getElementById('forecastMonths').value);
+
+            if (!planned || !cost) {
+                showAlert('forecastResult', '❌ Заполните все поля', 'error');
+                return;
+            }
+
+            const records = JSON.parse(localStorage.getItem('teacherRecords') || '[]');
+            const endDate = new Date();
+            const startDate = new Date();
+            startDate.setMonth(endDate.getMonth() - months);
+
+            const periodRecords = records.filter(record => {
+                const recordDate = new Date(record.date);
+                return recordDate >= startDate && recordDate <= endDate;
+            });
+
+            let historicalKVP = 75;
+            
+            if (periodRecords.length > 0) {
+                let totalPlannedRevenue = 0;
+                let totalTeacherSalary = 0;
+
+                periodRecords.forEach(record => {
+                    // Исключаем отмены по причине "Больничный/отпуск" из расчета КВП
+                    let adjustedPlannedRevenue = record.totalPlannedRevenue;
+                    
+                    // Если есть отмены по причине "Больничный/отпуск", корректируем плановую выручку
+                    if (record.cancellationReasons) {
+                        record.cancellationReasons.forEach((reason, index) => {
+                            if (reason === 'Больничный/отпуск') {
+                                adjustedPlannedRevenue -= record.cancelledCosts[index];
+                            }
+                        });
+                    }
+                    
+                    totalPlannedRevenue += adjustedPlannedRevenue;
+                    totalTeacherSalary += record.teacherSalary;
+                });
+
+                historicalKVP = totalPlannedRevenue > 0 ? (totalTeacherSalary / (totalPlannedRevenue * 0.4)) * 100 : 75;
+            }
+
+            const plannedRevenue = planned * cost;
+            const potentialSalary = plannedRevenue * 0.4;
+            const forecastSalary = potentialSalary * (historicalKVP / 100);
+
+            document.getElementById('forecastResult').innerHTML = `
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-value">${periodRecords.length}</div>
+                        <div class="stat-label">На основе записей</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${historicalKVP.toFixed(1)}%</div>
+                        <div class="stat-label">Ваш КВП (без учета больничных)</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${plannedRevenue.toFixed(2)} руб.</div>
+                        <div class="stat-label">Плановая выручка</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${potentialSalary.toFixed(2)} руб.</div>
+                        <div class="stat-label">Потенциальная зарплата (100% КВП)</div>
+                    </div>
+                    <div class="stat-item" style="border-left-color: var(--success); background: var(--gradient-surface);">
+                        <div class="stat-value" style="color: var(--success);">${forecastSalary.toFixed(2)} руб.</div>
+                        <div class="stat-label">Прогноз зарплаты</div>
+                    </div>
+                </div>
+                <div class="alert alert-info mt-lg">
+                    💡 В расчете КВП не учитываются занятия, отмененные по причине "Больничный/отпуск".
+                </div>
+            `;
+        }
+
+        // ========== ФУНКЦИИ РАСЧЕТА ЗАРПЛАТЫ ЗА ПЕРИОД ==========
 
         function calculatePeriodSalary() {
             const fromDate = document.getElementById('periodFrom').value;
@@ -2029,59 +2456,299 @@
             }
         }
 
-        // ========== ФУНКЦИЯ ДЛЯ ПОДСКАЗКИ ПРОГНОЗА ==========
-        function toggleForecastHelp() {
-            const helpContent = document.getElementById('forecastHelp');
-            const toggleIcon = document.querySelector('.toggle-icon');
-            
-            helpContent.classList.toggle('expanded');
-            toggleIcon.classList.toggle('expanded');
+        // ========== ФУНКЦИИ ПОСЛЕДНИХ ЗАПИСЕЙ ==========
+
+        // Показать последние записи
+        function showRecentRecords() {
+            showScreen('recordsScreen');
         }
 
-        // ========== ОБНОВЛЕННЫЕ ФУНКЦИИ ДЛЯ ТИПОВ ЗАНЯТИЙ ==========
+        // Загрузить последние записи
+        function loadRecentRecords() {
+            const records = JSON.parse(localStorage.getItem('teacherRecords') || '[]');
+            const recentRecords = records.slice(-10).reverse();
 
-        // Добавить поле для стоимости занятия с типом
-        function addCostField() {
-            const container = document.getElementById('costsContainer');
-            const costId = 'cost_' + Date.now();
-            const lessonNumber = lessonCosts.length + 1;
+            if (recentRecords.length === 0) {
+                document.getElementById('recordsList').innerHTML = `
+                    <div class="alert alert-info">
+                        📋 Нет сохраненных записей. Добавьте первую запись.
+                    </div>
+                `;
+            } else {
+                let recordsHTML = '';
+                recentRecords.forEach(record => {
+                    // Форматируем дату для отображения
+                    const recordDate = new Date(record.date);
+                    const formattedDate = recordDate.toLocaleDateString('ru-RU', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric'
+                    });
+                    
+                    recordsHTML += `
+                        <div class="record-item" onclick="showRecordDetails(${JSON.stringify(record).replace(/"/g, '&quot;')})">
+                            <div class="record-actions">
+                                <button class="action-btn edit-btn" onclick="event.stopPropagation(); showEditRecordModal(${JSON.stringify(record).replace(/"/g, '&quot;')})">
+                                    ✏️
+                                </button>
+                                <button class="action-btn delete-btn" onclick="event.stopPropagation(); showDeleteRecordConfirmation(${JSON.stringify(record).replace(/"/g, '&quot;')})">
+                                    ×
+                                </button>
+                            </div>
+                            <div class="record-content">
+                                <div class="stat-value">${formattedDate}</div>
+                                <div class="stat-label">
+                                    📚 ${record.conducted}/${record.planned} занятий
+                                    ${record.cancelled > 0 ? ` • ❌ ${record.cancelled} отменено` : ''}
+                                </div>
+                                <div class="stat-value" style="color: var(--success);">${record.teacherSalary.toFixed(2)} руб.</div>
+                                <div class="stat-label" style="margin-top: var(--space-sm); font-size: 12px; color: var(--text-muted);">
+                                    👆 Нажмите для деталей
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                document.getElementById('recordsList').innerHTML = recordsHTML;
+            }
+        }
+
+        // ========== ФУНКЦИИ ДЕТАЛИЗАЦИИ ЗАПИСИ ==========
+
+        function showRecordDetails(record) {
+            const modal = document.getElementById('recordDetailsModal');
+            const content = document.getElementById('recordDetailsContent');
+            
+            // Форматируем дату
+            const recordDate = new Date(record.date);
+            const formattedDate = recordDate.toLocaleDateString('ru-RU', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric'
+            });
+            
+            // Создаем HTML для детализации
+            let detailsHTML = `
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-icon">📅</div>
+                        <div class="card-title">Дата: ${formattedDate}</div>
+                    </div>
+                    <div class="card-content">
+                        <div class="stat-value">${record.conducted}/${record.planned} занятий</div>
+                        ${record.cancelled > 0 ? 
+                            `<div class="stat-label">❌ Отменено: ${record.cancelled} занятий</div>` : 
+                            ''}
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-icon">💰</div>
+                        <div class="card-title">Финансовые показатели</div>
+                    </div>
+                    <div class="card-content">
+                        <div class="stats-grid">
+                            <div class="stat-item">
+                                <div class="stat-value">${record.totalPlannedRevenue.toFixed(2)} руб.</div>
+                                <div class="stat-label">Плановая выручка</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">${record.totalRevenue.toFixed(2)} руб.</div>
+                                <div class="stat-label">Фактическая выручка</div>
+                            </div>
+                            <div class="stat-item" style="border-left-color: var(--success);">
+                                <div class="stat-value" style="color: var(--success);">${record.teacherSalary.toFixed(2)} руб.</div>
+                                <div class="stat-label">Зарплата (40%)</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Добавляем информацию об отмененных занятиях, если они есть
+            if (record.cancelled > 0 && record.cancellationReasons && record.cancellationReasons.length > 0) {
+                detailsHTML += `
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-icon">❌</div>
+                            <div class="card-title">Информация об отменах</div>
+                        </div>
+                        <div class="card-content">
+                            <div class="stat-label"><strong>Причины отмен:</strong></div>
+                            ${record.cancellationReasons.map((reason, index) => `
+                                <div class="stat-label">• Занятие ${index + 1}: ${reason}</div>
+                            `).join('')}
+                            <div class="stat-label mt-md"><strong>Сумма отмен:</strong> ${record.totalCancelledRevenue.toFixed(2)} руб.</div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Добавляем детали по занятиям
+            detailsHTML += `
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-icon">📚</div>
+                        <div class="card-title">Детализация занятий</div>
+                    </div>
+                    <div class="card-content">
+            `;
+            
+            if (record.plannedCosts && record.plannedCosts.length > 0) {
+                record.plannedCosts.forEach((cost, index) => {
+                    const isCancelled = record.cancelledCosts && record.cancelledCosts.includes(cost);
+                    const lessonType = record.lessonTypes && record.lessonTypes[index] ? record.lessonTypes[index] : 'individual';
+                    const typeClass = lessonType === 'individual' ? 'lesson-type-individual' : 'lesson-type-intensive';
+                    const typeLabel = lessonType === 'individual' ? 'Индивидуальное' : 'Интенсив';
+                    const cancellationReason = record.cancellationReasons && record.cancellationReasons[index] ? record.cancellationReasons[index] : '';
+                    
+                    detailsHTML += `
+                        <div class="cost-item ${isCancelled ? 'cancelled' : ''}">
+                            <div class="cost-details">
+                                <div class="flex justify-between items-center">
+                                    <div>
+                                        <strong>Занятие ${index + 1}:</strong> ${cost.toFixed(2)} руб.
+                                        <span class="${typeClass}">${typeLabel}</span>
+                                    </div>
+                                    <div>
+                                        ${isCancelled ? 
+                                            `<span style="color: var(--error);">❌ Отменено (${cancellationReason})</span>` : 
+                                            '<span style="color: var(--success);">✅ Проведено</span>'}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+            } else {
+                detailsHTML += `<div class="stat-label">Нет информации о занятиях</div>`;
+            }
+            
+            detailsHTML += `</div></div>`;
+            
+            // Добавляем информацию о времени создания
+            if (record.timestamp) {
+                const createdDate = new Date(record.timestamp);
+                const formattedCreated = createdDate.toLocaleDateString('ru-RU', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+                
+                detailsHTML += `
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-icon">⏰</div>
+                            <div class="card-title">Информация о записи</div>
+                        </div>
+                        <div class="card-content">
+                            <div class="stat-label">Создано: ${formattedCreated}</div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            content.innerHTML = detailsHTML;
+            modal.classList.add('active');
+        }
+
+        function hideRecordDetailsModal() {
+            document.getElementById('recordDetailsModal').classList.remove('active');
+        }
+
+        // ========== ФУНКЦИИ РЕДАКТИРОВАНИЯ ЗАПИСЕЙ ==========
+
+        // Показать модальное окно редактирования записи
+        function showEditRecordModal(record) {
+            recordToEdit = record;
+            
+            document.getElementById('editRecordDate').value = record.date;
+            
+            loadEditCosts(record);
+            
+            document.getElementById('editRecordModal').classList.add('active');
+        }
+
+        // Скрыть модальное окно редактирования
+        function hideEditRecordModal() {
+            recordToEdit = null;
+            editLessonCosts = [];
+            document.getElementById('editRecordModal').classList.remove('active');
+        }
+
+        // Загрузить стоимости занятий для редактирования
+        function loadEditCosts(record) {
+            const container = document.getElementById('editCostsContainer');
+            container.innerHTML = '';
+            editLessonCosts = [];
+            
+            record.plannedCosts.forEach((cost, index) => {
+                const isCancelled = record.cancelledCosts && record.cancelledCosts.includes(cost);
+                const cancellationReason = record.cancellationReasons && record.cancellationReasons[index] ? record.cancellationReasons[index] : '';
+                const type = record.lessonTypes && record.lessonTypes[index] ? record.lessonTypes[index] : 'individual';
+                
+                addEditCostField(cost, isCancelled, type, cancellationReason);
+            });
+            
+            updateEditCancellationInterface();
+        }
+
+        // Добавить поле для редактирования стоимости
+        function addEditCostField(cost = 0, cancelled = false, type = 'individual', cancellationReason = '') {
+            const container = document.getElementById('editCostsContainer');
+            const costId = 'edit_cost_' + Date.now();
             
             const costDiv = document.createElement('div');
             costDiv.className = 'form-row';
             costDiv.innerHTML = `
-                <span style="min-width: 30px;">${lessonNumber}.</span>
+                <span style="min-width: 30px;">${editLessonCosts.length + 1}.</span>
                 <input type="number" 
                        class="form-input lesson-cost-input" 
                        id="${costId}" 
                        placeholder="Стоимость (руб.)" 
                        step="0.01" 
                        min="0"
+                       value="${cost}"
                        style="width: 120px;"
-                       onchange="updateCancellationInterface()">
+                       onchange="updateEditCancellationInterface()">
                 <select class="form-select" id="${costId}_type" style="width: 140px;">
-                    <option value="individual">Индивидуальное</option>
-                    <option value="intensive">Интенсив</option>
+                    <option value="individual" ${type === 'individual' ? 'selected' : ''}>Индивидуальное</option>
+                    <option value="intensive" ${type === 'intensive' ? 'selected' : ''}>Интенсив</option>
                 </select>
-                <button type="button" class="action-btn delete-btn" onclick="removeCostField('${costId}')" style="width: 44px; height: 44px; font-size: 20px; display: flex; align-items: center; justify-content: center;">×</button>
+                <button type="button" class="action-btn delete-btn" onclick="removeEditCostField('${costId}')" style="width: 44px; height: 44px; font-size: 20px; display: flex; align-items: center; justify-content: center;">×</button>
             `;
             
             container.appendChild(costDiv);
-            lessonCosts.push({ 
+            editLessonCosts.push({ 
                 id: costId, 
-                value: 0,
-                cancelled: false,
-                type: 'individual'
+                value: parseFloat(cost) || 0,
+                cancelled: cancelled,
+                cancellationReason: cancellationReason,
+                type: type
             });
             
-            updateCancellationInterface();
+            updateEditCancellationInterface();
         }
 
-        // Обновить интерфейс отметки отмененных занятий
-        function updateCancellationInterface() {
-            const cancellationSection = document.getElementById('cancellationSection');
-            const cancellationContainer = document.getElementById('cancellationContainer');
+        // Удалить поле стоимости при редактировании
+        function removeEditCostField(costId) {
+            const field = document.getElementById(costId);
+            if (field) {
+                field.parentElement.remove();
+            }
+            editLessonCosts = editLessonCosts.filter(cost => cost.id !== costId);
+            updateEditCancellationInterface();
+        }
+
+        // Обновить интерфейс отметки отмененных занятий при редактировании
+        function updateEditCancellationInterface() {
+            const cancellationSection = document.getElementById('editCancellationSection');
+            const cancellationContainer = document.getElementById('editCancellationContainer');
             
-            lessonCosts.forEach((costItem, index) => {
+            editLessonCosts.forEach((costItem, index) => {
                 const field = document.getElementById(costItem.id);
                 const typeField = document.getElementById(costItem.id + '_type');
                 if (field) {
@@ -2092,13 +2759,13 @@
                 }
             });
             
-            const hasValidLessons = lessonCosts.some(cost => cost.value > 0);
+            const hasValidLessons = editLessonCosts.some(cost => cost.value > 0);
             
             if (hasValidLessons) {
                 cancellationSection.style.display = 'block';
                 
                 cancellationContainer.innerHTML = '';
-                lessonCosts.forEach((costItem, index) => {
+                editLessonCosts.forEach((costItem, index) => {
                     if (costItem.value > 0) {
                         const typeLabel = costItem.type === 'individual' ? 'Индивидуальное' : 'Интенсив';
                         const typeClass = costItem.type === 'individual' ? 'lesson-type-individual' : 'lesson-type-intensive';
@@ -2109,14 +2776,24 @@
                             <div class="cost-details">
                                 <input type="checkbox" 
                                        class="cost-checkbox" 
-                                       id="cancel_${costItem.id}"
+                                       id="edit_cancel_${costItem.id}"
                                        ${costItem.cancelled ? 'checked' : ''}
-                                       onchange="toggleCancellation('${costItem.id}', ${index})">
-                                <label for="cancel_${costItem.id}">
+                                       onchange="toggleEditCancellation('${costItem.id}', ${index})">
+                                <label for="edit_cancel_${costItem.id}">
                                     Занятие ${index + 1}: <strong>${costItem.value.toFixed(2)} руб.</strong>
                                     <span class="${typeClass}">${typeLabel}</span>
                                     ${costItem.cancelled ? ' (❌ Отменено)' : ''}
                                 </label>
+                                ${costItem.cancelled ? `
+                                    <div class="cancellation-reason">
+                                        <label>Причина отмены:</label>
+                                        <select id="edit_reason_${costItem.id}" onchange="updateEditCancellationReason('${costItem.id}', this.value)">
+                                            <option value="">Выберите причину</option>
+                                            <option value="Больничный/отпуск" ${costItem.cancellationReason === 'Больничный/отпуск' ? 'selected' : ''}>Больничный/отпуск</option>
+                                            <option value="Отменено" ${costItem.cancellationReason === 'Отменено' ? 'selected' : ''}>Отменено</option>
+                                        </select>
+                                    </div>
+                                ` : ''}
                             </div>
                         `;
                         cancellationContainer.appendChild(lessonDiv);
@@ -2126,26 +2803,100 @@
                 cancellationSection.style.display = 'none';
             }
             
-            updateSalaryCalculation();
+            updateEditSalaryCalculation();
         }
 
-        // Добавить запись с учетом типов занятий
-        async function addRecord() {
-            const date = document.getElementById('recordDate').value || new Date().toISOString().split('T')[0];
-            const cancellationReason = document.getElementById('cancellationReason').value;
+        // Обновить причину отмены при редактировании
+        function updateEditCancellationReason(costId, reason) {
+            const costItem = editLessonCosts.find(cost => cost.id === costId);
+            if (costItem) {
+                costItem.cancellationReason = reason;
+            }
+        }
+
+        // Переключить статус отмены занятия при редактировании
+        function toggleEditCancellation(costId, index) {
+            const checkbox = document.getElementById(`edit_cancel_${costId}`);
+            editLessonCosts[index].cancelled = checkbox.checked;
+            
+            // Сбрасываем причину отмены при снятии отметки
+            if (!editLessonCosts[index].cancelled) {
+                editLessonCosts[index].cancellationReason = '';
+            }
+            
+            updateEditCancellationInterface();
+        }
+
+        // Обновить расчет зарплаты при редактировании
+        function updateEditSalaryCalculation() {
+            const conductedLessons = editLessonCosts.filter(cost => cost.value > 0 && !cost.cancelled);
+            const cancelledLessons = editLessonCosts.filter(cost => cost.value > 0 && cost.cancelled);
+            
+            if (conductedLessons.length > 0 || cancelledLessons.length > 0) {
+                const totalPlannedRevenue = editLessonCosts
+                    .filter(cost => cost.value > 0)
+                    .reduce((sum, cost) => sum + cost.value, 0);
+                    
+                const totalRevenue = conductedLessons.reduce((sum, cost) => sum + cost.value, 0);
+                const totalCancelledRevenue = cancelledLessons.reduce((sum, cost) => sum + cost.value, 0);
+                const teacherSalary = totalRevenue * 0.4;
+                
+                document.getElementById('editSalaryCalculation').style.display = 'block';
+                
+                let detailsHTML = `
+                    <div class="stat-item">
+                        📊 Всего запланировано: <strong>${editLessonCosts.filter(cost => cost.value > 0).length} занятий</strong>
+                    </div>
+                    <div class="stat-item">
+                        ✅ Проведено: <strong>${conductedLessons.length} занятий</strong>
+                    </div>
+                `;
+                
+                if (cancelledLessons.length > 0) {
+                    detailsHTML += `
+                        <div class="stat-item">
+                            ❌ Отменено: <strong>${cancelledLessons.length} занятий</strong>
+                        </div>
+                    `;
+                }
+                
+                detailsHTML += `
+                    <div style="background: #fff5f5; padding: var(--space-lg); border-radius: var(--radius-lg); margin-top: var(--space-md);">
+                        <div>💰 Общая выручка: <strong>${totalRevenue.toFixed(2)} руб.</strong></div>
+                        <div style="color: var(--text-primary); font-weight: var(--font-weight-bold); margin-top: var(--space-sm);">
+                            💵 Зарплата (40%): <strong>${teacherSalary.toFixed(2)} руб.</strong>
+                        </div>
+                    </div>
+                `;
+                
+                document.getElementById('editCalculationDetails').innerHTML = detailsHTML;
+            } else {
+                document.getElementById('editSalaryCalculation').style.display = 'none';
+            }
+        }
+
+        // Сохранить отредактированную запись
+        async function saveEditedRecord() {
+            if (!recordToEdit) {
+                return;
+            }
+
+            const date = document.getElementById('editRecordDate').value;
 
             const plannedLessons = [];
             const conductedLessons = [];
             const cancelledLessons = [];
             const lessonTypes = [];
+            const cancellationReasons = [];
             
-            lessonCosts.forEach((costItem, index) => {
+            editLessonCosts.forEach((costItem, index) => {
                 const field = document.getElementById(costItem.id);
                 if (field && costItem.value > 0) {
                     const lessonData = {
                         number: index + 1,
                         cost: costItem.value,
                         cancelled: costItem.cancelled,
+                        cancellationReason: costItem.cancellationReason,
                         type: costItem.type
                     };
                     
@@ -2154,6 +2905,7 @@
                     
                     if (costItem.cancelled) {
                         cancelledLessons.push(lessonData);
+                        cancellationReasons.push(costItem.cancellationReason);
                     } else {
                         conductedLessons.push(lessonData);
                     }
@@ -2161,7 +2913,7 @@
             });
 
             if (plannedLessons.length === 0) {
-                showAlert('addRecordStatus', '❌ Добавьте хотя бы одно занятие с стоимостью', 'error');
+                showAlert('editRecordStatus', '❌ Добавьте хотя бы одно занятие с стоимостью', 'error');
                 return;
             }
 
@@ -2169,48 +2921,88 @@
             const totalRevenue = conductedLessons.reduce((sum, lesson) => sum + lesson.cost, 0);
             const totalCancelledRevenue = cancelledLessons.reduce((sum, lesson) => sum + lesson.cost, 0);
             const teacherSalary = totalRevenue * 0.4;
-            const timestamp = new Date().toISOString();
 
-            const record = {
-                date: date,
-                planned: plannedLessons.length,
-                conducted: conductedLessons.length,
-                cancelled: cancelledLessons.length,
-                plannedCosts: plannedLessons.map(l => l.cost),
-                conductedCosts: conductedLessons.map(l => l.cost),
-                cancelledCosts: cancelledLessons.map(l => l.cost),
-                lessonTypes: lessonTypes,
-                cancellationReason: cancellationReason || '',
-                totalPlannedRevenue: totalPlannedRevenue,
-                totalRevenue: totalRevenue,
-                totalCancelledRevenue: totalCancelledRevenue,
-                teacherSalary: teacherSalary,
-                timestamp: timestamp
-            };
+            recordToEdit.date = date;
+            recordToEdit.planned = plannedLessons.length;
+            recordToEdit.conducted = conductedLessons.length;
+            recordToEdit.cancelled = cancelledLessons.length;
+            recordToEdit.plannedCosts = plannedLessons.map(l => l.cost);
+            recordToEdit.conductedCosts = conductedLessons.map(l => l.cost);
+            recordToEdit.cancelledCosts = cancelledLessons.map(l => l.cost);
+            recordToEdit.lessonTypes = lessonTypes;
+            recordToEdit.cancellationReasons = cancellationReasons;
+            recordToEdit.totalPlannedRevenue = totalPlannedRevenue;
+            recordToEdit.totalRevenue = totalRevenue;
+            recordToEdit.totalCancelledRevenue = totalCancelledRevenue;
+            recordToEdit.teacherSalary = teacherSalary;
 
-            saveToLocalStorage(record);
+            const records = JSON.parse(localStorage.getItem('teacherRecords') || '[]');
+            const updatedRecords = records.map(record => 
+                record.timestamp === recordToEdit.timestamp ? recordToEdit : record
+            );
+            
+            localStorage.setItem('teacherRecords', JSON.stringify(updatedRecords));
             
             if (GITHUB_CONFIG.username && GITHUB_CONFIG.token) {
                 try {
                     await saveToGitHub();
-                    showAlert('addRecordStatus', '✅ Запись сохранена и синхронизирована с GitHub!', 'success');
+                    showAlert('editRecordStatus', '✅ Запись обновлена и синхронизирована с GitHub!', 'success');
                 } catch (error) {
-                    showAlert('addRecordStatus', `✅ Запись сохранена локально (GitHub: ${error.message})`, 'success');
+                    showAlert('editRecordStatus', `✅ Запись обновлена локально (GitHub: ${error.message})`, 'success');
                 }
             } else {
-                showAlert('addRecordStatus', '✅ Запись сохранена локально!', 'success');
+                showAlert('editRecordStatus', '✅ Запись обновлена локально!', 'success');
             }
             
-            document.getElementById('cancellationReason').value = '';
-            document.getElementById('salaryCalculation').style.display = 'none';
-            document.getElementById('cancellationSection').style.display = 'none';
+            setTimeout(() => {
+                loadRecentRecords();
+                hideEditRecordModal();
+            }, 2000);
+        }
+
+        // ========== ФУНКЦИИ УДАЛЕНИЯ ЗАПИСЕЙ ==========
+
+        // Показать модальное окно подтверждения удаления записи
+        function showDeleteRecordConfirmation(record) {
+            recordToDelete = record;
+            document.getElementById('deleteRecordDate').textContent = record.date;
+            document.getElementById('deleteRecordModal').classList.add('active');
+        }
+
+        // Скрыть модальное окно подтверждения удаления записи
+        function hideDeleteRecordConfirmation() {
+            recordToDelete = null;
+            document.getElementById('deleteRecordModal').classList.remove('active');
+        }
+
+        // Подтвердить удаление записи
+        async function confirmDeleteRecord() {
+            if (!recordToDelete) {
+                hideDeleteRecordConfirmation();
+                return;
+            }
+
+            const records = JSON.parse(localStorage.getItem('teacherRecords') || '[]');
+            const updatedRecords = records.filter(record => 
+                !(record.date === recordToDelete.date && record.timestamp === recordToDelete.timestamp)
+            );
             
-            const costsContainer = document.getElementById('costsContainer');
-            costsContainer.innerHTML = '';
-            lessonCosts = [];
-            addCostField();
+            localStorage.setItem('teacherRecords', JSON.stringify(updatedRecords));
             
-            setTimeout(() => showScreen('mainMenu'), 2000);
+            if (GITHUB_CONFIG.username && GITHUB_CONFIG.token) {
+                try {
+                    await saveToGitHub();
+                    console.log('✅ Запись удалена и синхронизирована с GitHub');
+                } catch (error) {
+                    console.error('❌ Ошибка синхронизации с GitHub:', error);
+                }
+            }
+            
+            loadRecentRecords();
+            
+            showAlert('recordsList', '✅ Запись успешно удалена!', 'success');
+            
+            hideDeleteRecordConfirmation();
         }
 
         // ========== GITHUB ФУНКЦИИ ==========
@@ -2415,334 +3207,6 @@
             hideDeleteConfirmation();
         }
 
-        // Показать модальное окно подтверждения удаления файла из GitHub
-        function showDeleteConfirmation() {
-            if (!GITHUB_CONFIG.username || !GITHUB_CONFIG.token) {
-                showAlert('githubSyncStatus', '❌ Сначала настройте GitHub', 'error');
-                return;
-            }
-            document.getElementById('deleteModal').classList.add('active');
-        }
-
-        // Скрыть модальное окно подтверждения удаления файла из GitHub
-        function hideDeleteConfirmation() {
-            document.getElementById('deleteModal').classList.remove('active');
-        }
-
-        // Показать модальное окно подтверждения удаления записи
-        function showDeleteRecordConfirmation(record) {
-            recordToDelete = record;
-            document.getElementById('deleteRecordDate').textContent = record.date;
-            document.getElementById('deleteRecordModal').classList.add('active');
-        }
-
-        // Скрыть модальное окно подтверждения удаления записи
-        function hideDeleteRecordConfirmation() {
-            recordToDelete = null;
-            document.getElementById('deleteRecordModal').classList.remove('active');
-        }
-
-        // Подтвердить удаление записи
-        async function confirmDeleteRecord() {
-            if (!recordToDelete) {
-                hideDeleteRecordConfirmation();
-                return;
-            }
-
-            const records = JSON.parse(localStorage.getItem('teacherRecords') || '[]');
-            const updatedRecords = records.filter(record => 
-                !(record.date === recordToDelete.date && record.timestamp === recordToDelete.timestamp)
-            );
-            
-            localStorage.setItem('teacherRecords', JSON.stringify(updatedRecords));
-            
-            if (GITHUB_CONFIG.username && GITHUB_CONFIG.token) {
-                try {
-                    await saveToGitHub();
-                    console.log('✅ Запись удалена и синхронизирована с GitHub');
-                } catch (error) {
-                    console.error('❌ Ошибка синхронизации с GitHub:', error);
-                }
-            }
-            
-            loadRecentRecords();
-            
-            showAlert('recordsList', '✅ Запись успешно удалена!', 'success');
-            
-            hideDeleteRecordConfirmation();
-        }
-
-        // ========== ФУНКЦИИ РЕДАКТИРОВАНИЯ ЗАПИСЕЙ ==========
-
-        // Показать модальное окно редактирования записи
-        function showEditRecordModal(record) {
-            recordToEdit = record;
-            
-            document.getElementById('editRecordDate').value = record.date;
-            document.getElementById('editCancellationReason').value = record.cancellationReason || '';
-            
-            loadEditCosts(record);
-            
-            document.getElementById('editRecordModal').classList.add('active');
-        }
-
-        // Скрыть модальное окно редактирования
-        function hideEditRecordModal() {
-            recordToEdit = null;
-            editLessonCosts = [];
-            document.getElementById('editRecordModal').classList.remove('active');
-        }
-
-        // Загрузить стоимости занятий для редактирования
-        function loadEditCosts(record) {
-            const container = document.getElementById('editCostsContainer');
-            container.innerHTML = '';
-            editLessonCosts = [];
-            
-            record.plannedCosts.forEach((cost, index) => {
-                addEditCostField(cost, record.cancelledCosts.includes(cost), record.lessonTypes ? record.lessonTypes[index] : 'individual');
-            });
-            
-            updateEditCancellationInterface();
-        }
-
-        // Добавить поле для редактирования стоимости
-        function addEditCostField(cost = 0, cancelled = false, type = 'individual') {
-            const container = document.getElementById('editCostsContainer');
-            const costId = 'edit_cost_' + Date.now();
-            
-            const costDiv = document.createElement('div');
-            costDiv.className = 'form-row';
-            costDiv.innerHTML = `
-                <span style="min-width: 30px;">${editLessonCosts.length + 1}.</span>
-                <input type="number" 
-                       class="form-input lesson-cost-input" 
-                       id="${costId}" 
-                       placeholder="Стоимость (руб.)" 
-                       step="0.01" 
-                       min="0"
-                       value="${cost}"
-                       style="width: 120px;"
-                       onchange="updateEditCancellationInterface()">
-                <select class="form-select" id="${costId}_type" style="width: 140px;">
-                    <option value="individual" ${type === 'individual' ? 'selected' : ''}>Индивидуальное</option>
-                    <option value="intensive" ${type === 'intensive' ? 'selected' : ''}>Интенсив</option>
-                </select>
-                <button type="button" class="action-btn delete-btn" onclick="removeEditCostField('${costId}')" style="width: 44px; height: 44px; font-size: 20px; display: flex; align-items: center; justify-content: center;">×</button>
-            `;
-            
-            container.appendChild(costDiv);
-            editLessonCosts.push({ 
-                id: costId, 
-                value: parseFloat(cost) || 0,
-                cancelled: cancelled,
-                type: type
-            });
-            
-            updateEditCancellationInterface();
-        }
-
-        // Удалить поле стоимости при редактировании
-        function removeEditCostField(costId) {
-            const field = document.getElementById(costId);
-            if (field) {
-                field.parentElement.remove();
-            }
-            editLessonCosts = editLessonCosts.filter(cost => cost.id !== costId);
-            updateEditCancellationInterface();
-        }
-
-        // Обновить интерфейс отметки отмененных занятий при редактировании
-        function updateEditCancellationInterface() {
-            const cancellationSection = document.getElementById('editCancellationSection');
-            const cancellationContainer = document.getElementById('editCancellationContainer');
-            
-            editLessonCosts.forEach((costItem, index) => {
-                const field = document.getElementById(costItem.id);
-                const typeField = document.getElementById(costItem.id + '_type');
-                if (field) {
-                    costItem.value = parseFloat(field.value) || 0;
-                }
-                if (typeField) {
-                    costItem.type = typeField.value;
-                }
-            });
-            
-            const hasValidLessons = editLessonCosts.some(cost => cost.value > 0);
-            
-            if (hasValidLessons) {
-                cancellationSection.style.display = 'block';
-                
-                cancellationContainer.innerHTML = '';
-                editLessonCosts.forEach((costItem, index) => {
-                    if (costItem.value > 0) {
-                        const typeLabel = costItem.type === 'individual' ? 'Индивидуальное' : 'Интенсив';
-                        const typeClass = costItem.type === 'individual' ? 'lesson-type-individual' : 'lesson-type-intensive';
-                        
-                        const lessonDiv = document.createElement('div');
-                        lessonDiv.className = `cost-item ${costItem.cancelled ? 'cancelled' : ''}`;
-                        lessonDiv.innerHTML = `
-                            <div class="cost-details">
-                                <input type="checkbox" 
-                                       class="cost-checkbox" 
-                                       id="edit_cancel_${costItem.id}"
-                                       ${costItem.cancelled ? 'checked' : ''}
-                                       onchange="toggleEditCancellation('${costItem.id}', ${index})">
-                                <label for="edit_cancel_${costItem.id}">
-                                    Занятие ${index + 1}: <strong>${costItem.value.toFixed(2)} руб.</strong>
-                                    <span class="${typeClass}">${typeLabel}</span>
-                                    ${costItem.cancelled ? ' (❌ Отменено)' : ''}
-                                </label>
-                            </div>
-                        `;
-                        cancellationContainer.appendChild(lessonDiv);
-                    }
-                });
-            } else {
-                cancellationSection.style.display = 'none';
-            }
-            
-            updateEditSalaryCalculation();
-        }
-
-        // Переключить статус отмены занятия при редактировании
-        function toggleEditCancellation(costId, index) {
-            const checkbox = document.getElementById(`edit_cancel_${costId}`);
-            editLessonCosts[index].cancelled = checkbox.checked;
-            updateEditCancellationInterface();
-        }
-
-        // Обновить расчет зарплаты при редактировании
-        function updateEditSalaryCalculation() {
-            const conductedLessons = editLessonCosts.filter(cost => cost.value > 0 && !cost.cancelled);
-            const cancelledLessons = editLessonCosts.filter(cost => cost.value > 0 && cost.cancelled);
-            
-            if (conductedLessons.length > 0 || cancelledLessons.length > 0) {
-                const totalPlannedRevenue = editLessonCosts
-                    .filter(cost => cost.value > 0)
-                    .reduce((sum, cost) => sum + cost.value, 0);
-                    
-                const totalRevenue = conductedLessons.reduce((sum, cost) => sum + cost.value, 0);
-                const totalCancelledRevenue = cancelledLessons.reduce((sum, cost) => sum + cost.value, 0);
-                const teacherSalary = totalRevenue * 0.4;
-                
-                document.getElementById('editSalaryCalculation').style.display = 'block';
-                
-                let detailsHTML = `
-                    <div class="stat-item">
-                        📊 Всего запланировано: <strong>${editLessonCosts.filter(cost => cost.value > 0).length} занятий</strong>
-                    </div>
-                    <div class="stat-item">
-                        ✅ Проведено: <strong>${conductedLessons.length} занятий</strong>
-                    </div>
-                `;
-                
-                if (cancelledLessons.length > 0) {
-                    detailsHTML += `
-                        <div class="stat-item">
-                            ❌ Отменено: <strong>${cancelledLessons.length} занятий</strong>
-                        </div>
-                    `;
-                }
-                
-                detailsHTML += `
-                    <div style="background: #fff5f5; padding: var(--space-lg); border-radius: var(--radius-lg); margin-top: var(--space-md);">
-                        <div>💰 Общая выручка: <strong>${totalRevenue.toFixed(2)} руб.</strong></div>
-                        <div style="color: var(--text-primary); font-weight: var(--font-weight-bold); margin-top: var(--space-sm);">
-                            💵 Зарплата (40%): <strong>${teacherSalary.toFixed(2)} руб.</strong>
-                        </div>
-                    </div>
-                `;
-                
-                document.getElementById('editCalculationDetails').innerHTML = detailsHTML;
-            } else {
-                document.getElementById('editSalaryCalculation').style.display = 'none';
-            }
-        }
-
-        // Сохранить отредактированную запись
-        async function saveEditedRecord() {
-            if (!recordToEdit) {
-                return;
-            }
-
-            const date = document.getElementById('editRecordDate').value;
-            const cancellationReason = document.getElementById('editCancellationReason').value;
-
-            const plannedLessons = [];
-            const conductedLessons = [];
-            const cancelledLessons = [];
-            const lessonTypes = [];
-            
-            editLessonCosts.forEach((costItem, index) => {
-                const field = document.getElementById(costItem.id);
-                if (field && costItem.value > 0) {
-                    const lessonData = {
-                        number: index + 1,
-                        cost: costItem.value,
-                        cancelled: costItem.cancelled,
-                        type: costItem.type
-                    };
-                    
-                    plannedLessons.push(lessonData);
-                    lessonTypes.push(costItem.type);
-                    
-                    if (costItem.cancelled) {
-                        cancelledLessons.push(lessonData);
-                    } else {
-                        conductedLessons.push(lessonData);
-                    }
-                }
-            });
-
-            if (plannedLessons.length === 0) {
-                showAlert('editRecordStatus', '❌ Добавьте хотя бы одно занятие с стоимостью', 'error');
-                return;
-            }
-
-            const totalPlannedRevenue = plannedLessons.reduce((sum, lesson) => sum + lesson.cost, 0);
-            const totalRevenue = conductedLessons.reduce((sum, lesson) => sum + lesson.cost, 0);
-            const totalCancelledRevenue = cancelledLessons.reduce((sum, lesson) => sum + lesson.cost, 0);
-            const teacherSalary = totalRevenue * 0.4;
-
-            recordToEdit.date = date;
-            recordToEdit.planned = plannedLessons.length;
-            recordToEdit.conducted = conductedLessons.length;
-            recordToEdit.cancelled = cancelledLessons.length;
-            recordToEdit.plannedCosts = plannedLessons.map(l => l.cost);
-            recordToEdit.conductedCosts = conductedLessons.map(l => l.cost);
-            recordToEdit.cancelledCosts = cancelledLessons.map(l => l.cost);
-            recordToEdit.lessonTypes = lessonTypes;
-            recordToEdit.cancellationReason = cancellationReason || '';
-            recordToEdit.totalPlannedRevenue = totalPlannedRevenue;
-            recordToEdit.totalRevenue = totalRevenue;
-            recordToEdit.totalCancelledRevenue = totalCancelledRevenue;
-            recordToEdit.teacherSalary = teacherSalary;
-
-            const records = JSON.parse(localStorage.getItem('teacherRecords') || '[]');
-            const updatedRecords = records.map(record => 
-                record.timestamp === recordToEdit.timestamp ? recordToEdit : record
-            );
-            
-            localStorage.setItem('teacherRecords', JSON.stringify(updatedRecords));
-            
-            if (GITHUB_CONFIG.username && GITHUB_CONFIG.token) {
-                try {
-                    await saveToGitHub();
-                    showAlert('editRecordStatus', '✅ Запись обновлена и синхронизирована с GitHub!', 'success');
-                } catch (error) {
-                    showAlert('editRecordStatus', `✅ Запись обновлена локально (GitHub: ${error.message})`, 'success');
-                }
-            } else {
-                showAlert('editRecordStatus', '✅ Запись обновлена локально!', 'success');
-            }
-            
-            setTimeout(() => {
-                loadRecentRecords();
-                hideEditRecordModal();
-            }, 2000);
-        }
-
         // Ручная синхронизация
         async function manualSyncToGitHub() {
             if (!GITHUB_CONFIG.username || !GITHUB_CONFIG.token) {
@@ -2761,411 +3225,18 @@
             }
         }
 
-        // ========== ОСНОВНЫЕ ФУНКЦИИ ПРИЛОЖЕНИЯ ==========
-
-        // Показать alert сообщение
-        function showAlert(containerId, message, type) {
-            const alertClass = {
-                'success': 'alert-success',
-                'error': 'alert-error', 
-                'info': 'alert-info',
-                'warning': 'alert-warning'
-            }[type] || 'alert-info';
-            
-            document.getElementById(containerId).innerHTML = 
-                `<div class="alert ${alertClass}">${message}</div>`;
-        }
-
-        // Загрузить локальные данные
-        function loadLocalData() {
-            const localData = localStorage.getItem('teacherRecords');
-            if (localData) {
-                console.log('📂 Локальные данные загружены:', JSON.parse(localData).length, 'записей');
-            }
-        }
-
-        // Удалить поле стоимости
-        function removeCostField(costId) {
-            const field = document.getElementById(costId);
-            if (field) {
-                field.parentElement.remove();
-            }
-            lessonCosts = lessonCosts.filter(cost => cost.id !== costId);
-            updateCancellationInterface();
-        }
-
-        // Переключить статус отмены занятия
-        function toggleCancellation(costId, index) {
-            const checkbox = document.getElementById(`cancel_${costId}`);
-            lessonCosts[index].cancelled = checkbox.checked;
-            updateCancellationInterface();
-        }
-
-        // Обновить расчет зарплаты
-        function updateSalaryCalculation() {
-            const conductedLessons = lessonCosts.filter(cost => cost.value > 0 && !cost.cancelled);
-            const cancelledLessons = lessonCosts.filter(cost => cost.value > 0 && cost.cancelled);
-            
-            if (conductedLessons.length > 0 || cancelledLessons.length > 0) {
-                const totalPlannedRevenue = lessonCosts
-                    .filter(cost => cost.value > 0)
-                    .reduce((sum, cost) => sum + cost.value, 0);
-                    
-                const totalRevenue = conductedLessons.reduce((sum, cost) => sum + cost.value, 0);
-                const totalCancelledRevenue = cancelledLessons.reduce((sum, cost) => sum + cost.value, 0);
-                const teacherSalary = totalRevenue * 0.4;
-                
-                document.getElementById('salaryCalculation').style.display = 'block';
-                
-                let detailsHTML = `
-                    <div class="stat-item">
-                        📊 Всего запланировано: <strong>${lessonCosts.filter(cost => cost.value > 0).length} занятий</strong>
-                    </div>
-                    <div class="stat-item">
-                        ✅ Проведено: <strong>${conductedLessons.length} занятий</strong>
-                    </div>
-                `;
-                
-                if (cancelledLessons.length > 0) {
-                    detailsHTML += `
-                        <div class="stat-item">
-                            ❌ Отменено: <strong>${cancelledLessons.length} занятий</strong>
-                        </div>
-                    `;
-                }
-                
-                detailsHTML += `
-                    <div style="background: #fff5f5; padding: var(--space-lg); border-radius: var(--radius-lg); margin-top: var(--space-md);">
-                        <div>💰 Общая выручка: <strong>${totalRevenue.toFixed(2)} руб.</strong></div>
-                        <div style="color: var(--text-primary); font-weight: var(--font-weight-bold); margin-top: var(--space-sm);">
-                            💵 Зарплата (40%): <strong>${teacherSalary.toFixed(2)} руб.</strong>
-                        </div>
-                    </div>
-                `;
-                
-                document.getElementById('calculationDetails').innerHTML = detailsHTML;
-            } else {
-                document.getElementById('salaryCalculation').style.display = 'none';
-            }
-        }
-
-        // Показать подсказку по КВП
-        function showKVPHelp() {
-            alert('КВП (Коэффициент Выполнения Плана) - показывает эффективность работы.\n\n' +
-                  'Формула расчета:\n' +
-                  'КВП = (Фактическая зарплата × 100%) / (Плановая зарплата × 40%)\n\n' +
-                  'Где:\n' +
-                  '• Фактическая зарплата = проведенные занятия × 40% от стоимости\n' +
-                  '• Плановая зарплата = запланированные занятия × стоимость\n\n' +
-                  'КВП 100% = план выполнен полностью\n\n' +
-                  'Важно: В расчете КВП не учитываются занятия, отмененные по причине "Больничный/отпуск".');
-        }
-
-        // Показать определенный экран
-        function showScreen(screenId) {
-            document.querySelectorAll('.screen').forEach(screen => {
-                screen.classList.remove('active');
-            });
-            document.getElementById(screenId).classList.add('active');
-            
-            if (screenId === 'githubSyncScreen') {
-                document.getElementById('githubUsername').value = GITHUB_CONFIG.username;
-                document.getElementById('githubRepo').value = GITHUB_CONFIG.repo;
-                document.getElementById('githubToken').value = GITHUB_CONFIG.token;
-            }
-            
-            if (screenId === 'statsScreen') {
-                loadStats(3);
-            } else if (screenId === 'recordsScreen') {
-                loadRecentRecords();
-            }
-        }
-
-        // Показать статистику
-        function showStats(months) {
-            showScreen('statsScreen');
-        }
-
-        // Показать последние записи
-        function showRecentRecords() {
-            showScreen('recordsScreen');
-        }
-
-        // Показать кастомную статистику
-        function showCustomStats() {
-            const months = document.getElementById('customMonths').value;
-            const container = document.getElementById('customStatsContent');
-            
-            if (!months || months < 1) {
-                showAlert('customStatsContent', '❌ Введите корректное количество месяцев', 'error');
+        // Показать модальное окно подтверждения удаления файла из GitHub
+        function showDeleteConfirmation() {
+            if (!GITHUB_CONFIG.username || !GITHUB_CONFIG.token) {
+                showAlert('githubSyncStatus', '❌ Сначала настройте GitHub', 'error');
                 return;
             }
-            
-            container.innerHTML = '<div class="loading"><div class="loading-spinner"></div><div>Загрузка статистики...</div></div>';
-            
-            const records = JSON.parse(localStorage.getItem('teacherRecords') || '[]');
-            
-            if (records.length === 0) {
-                container.innerHTML = `
-                    <div class="alert alert-info">
-                        📊 Нет данных для статистики. Добавьте несколько записей.
-                    </div>
-                `;
-                return;
-            }
-
-            const endDate = new Date();
-            const startDate = new Date();
-            startDate.setMonth(endDate.getMonth() - months);
-
-            const periodRecords = records.filter(record => {
-                const recordDate = new Date(record.date);
-                return recordDate >= startDate && recordDate <= endDate;
-            });
-
-            if (periodRecords.length === 0) {
-                container.innerHTML = '<div class="alert alert-info">Нет данных за указанный период</div>';
-                return;
-            }
-
-            let totalPlanned = 0;
-            let totalConducted = 0;
-            let totalCancelled = 0;
-            let totalPlannedRevenue = 0;
-            let totalActualRevenue = 0;
-            let totalTeacherSalary = 0;
-
-            periodRecords.forEach(record => {
-                totalPlanned += record.planned;
-                totalConducted += record.conducted;
-                totalCancelled += record.cancelled;
-                totalPlannedRevenue += record.totalPlannedRevenue;
-                totalActualRevenue += record.totalRevenue;
-                totalTeacherSalary += record.teacherSalary;
-            });
-
-            const avgMonthlySalary = totalTeacherSalary / months;
-            const kvp = totalPlannedRevenue > 0 ? (totalTeacherSalary / (totalPlannedRevenue * 0.4)) * 100 : 0;
-            const cancellationRate = totalPlanned > 0 ? (totalCancelled / totalPlanned) * 100 : 0;
-
-            let statsHTML = `
-                <div class="stats-grid">
-                    <div class="stat-item">
-                        <div class="stat-value">${periodRecords.length}</div>
-                        <div class="stat-label">Всего записей</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value">${totalPlanned}</div>
-                        <div class="stat-label">Занятий запланировано</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value">${totalConducted}</div>
-                        <div class="stat-label">Занятий проведено</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value">${totalCancelled}</div>
-                        <div class="stat-label">Занятий отменено</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value">${cancellationRate.toFixed(1)}%</div>
-                        <div class="stat-label">Процент отмен</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value">${totalActualRevenue.toFixed(2)} руб.</div>
-                        <div class="stat-label">Общая выручка</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value">${totalTeacherSalary.toFixed(2)} руб.</div>
-                        <div class="stat-label">Общая зарплата (40%)</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value">${avgMonthlySalary.toFixed(2)} руб.</div>
-                        <div class="stat-label">Средняя зарплата в месяц</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value">${kvp.toFixed(1)}%</div>
-                        <div class="stat-label">КВП</div>
-                    </div>
-                </div>
-            `;
-
-            container.innerHTML = statsHTML;
+            document.getElementById('deleteModal').classList.add('active');
         }
 
-        // Сохранить локально
-        function saveToLocalStorage(record) {
-            const records = JSON.parse(localStorage.getItem('teacherRecords') || '[]');
-            records.push(record);
-            localStorage.setItem('teacherRecords', JSON.stringify(records));
-            console.log('💾 Сохранено локально, всего записей:', records.length);
-        }
-
-        // Загрузить статистику из локального хранилища
-        function loadStats(months) {
-            const records = JSON.parse(localStorage.getItem('teacherRecords') || '[]');
-            
-            if (records.length === 0) {
-                document.getElementById('statsContent').innerHTML = `
-                    <div class="alert alert-info">
-                        📊 Нет данных для статистики. Добавьте несколько записей.
-                    </div>
-                `;
-                return;
-            }
-
-            const endDate = new Date();
-            const startDate = new Date();
-            startDate.setMonth(endDate.getMonth() - months);
-
-            const periodRecords = records.filter(record => {
-                const recordDate = new Date(record.date);
-                return recordDate >= startDate && recordDate <= endDate;
-            });
-
-            if (periodRecords.length === 0) {
-                document.getElementById('statsContent').innerHTML = '<div class="alert alert-info">Нет данных за указанный период</div>';
-                return;
-            }
-
-            let totalPlanned = 0;
-            let totalConducted = 0;
-            let totalCancelled = 0;
-            let totalPlannedRevenue = 0;
-            let totalActualRevenue = 0;
-            let totalTeacherSalary = 0;
-
-            periodRecords.forEach(record => {
-                totalPlanned += record.planned;
-                totalConducted += record.conducted;
-                totalCancelled += record.cancelled;
-                totalPlannedRevenue += record.totalPlannedRevenue;
-                totalActualRevenue += record.totalRevenue;
-                totalTeacherSalary += record.teacherSalary;
-            });
-
-            const avgMonthlySalary = totalTeacherSalary / months;
-            const kvp = totalPlannedRevenue > 0 ? (totalTeacherSalary / (totalPlannedRevenue * 0.4)) * 100 : 0;
-            const cancellationRate = totalPlanned > 0 ? (totalCancelled / totalPlanned) * 100 : 0;
-
-            let statsHTML = `
-                <div class="stats-grid">
-                    <div class="stat-item">
-                        <div class="stat-value">${periodRecords.length}</div>
-                        <div class="stat-label">Всего записей</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value">${totalPlanned}</div>
-                        <div class="stat-label">Занятий запланировано</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value">${totalConducted}</div>
-                        <div class="stat-label">Занятий проведено</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value">${totalCancelled}</div>
-                        <div class="stat-label">Занятий отменено</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value">${cancellationRate.toFixed(1)}%</div>
-                        <div class="stat-label">Процент отмен</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value">${totalActualRevenue.toFixed(2)} руб.</div>
-                        <div class="stat-label">Общая выручка</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value">${totalTeacherSalary.toFixed(2)} руб.</div>
-                        <div class="stat-label">Общая зарплата (40%)</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value">${avgMonthlySalary.toFixed(2)} руб.</div>
-                        <div class="stat-label">Средняя зарплата в месяц</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value">${kvp.toFixed(1)}%</div>
-                        <div class="stat-label">КВП</div>
-                    </div>
-                </div>
-            `;
-
-            document.getElementById('statsContent').innerHTML = statsHTML;
-        }
-
-        // Рассчитать прогноз зарплаты с учетом отмен по больничному/отпуску
-        function calculateForecast() {
-            const planned = parseInt(document.getElementById('forecastPlanned').value);
-            const cost = parseFloat(document.getElementById('forecastCost').value);
-            const months = parseInt(document.getElementById('forecastMonths').value);
-
-            if (!planned || !cost) {
-                showAlert('forecastResult', '❌ Заполните все поля', 'error');
-                return;
-            }
-
-            const records = JSON.parse(localStorage.getItem('teacherRecords') || '[]');
-            const endDate = new Date();
-            const startDate = new Date();
-            startDate.setMonth(endDate.getMonth() - months);
-
-            const periodRecords = records.filter(record => {
-                const recordDate = new Date(record.date);
-                return recordDate >= startDate && recordDate <= endDate;
-            });
-
-            let historicalKVP = 75;
-            
-            if (periodRecords.length > 0) {
-                let totalPlannedRevenue = 0;
-                let totalTeacherSalary = 0;
-
-                periodRecords.forEach(record => {
-                    // Исключаем отмены по причине "Больничный/отпуск" из расчета КВП
-                    let adjustedPlannedRevenue = record.totalPlannedRevenue;
-                    let adjustedTeacherSalary = record.teacherSalary;
-                    
-                    // Если есть отмены по причине "Больничный/отпуск", корректируем плановую выручку
-                    if (record.cancellationReason === 'Больничный/отпуск' && record.cancelled > 0) {
-                        adjustedPlannedRevenue = record.totalPlannedRevenue - record.totalCancelledRevenue;
-                    }
-                    
-                    totalPlannedRevenue += adjustedPlannedRevenue;
-                    totalTeacherSalary += adjustedTeacherSalary;
-                });
-
-                historicalKVP = totalPlannedRevenue > 0 ? (totalTeacherSalary / (totalPlannedRevenue * 0.4)) * 100 : 75;
-            }
-
-            const plannedRevenue = planned * cost;
-            const potentialSalary = plannedRevenue * 0.4;
-            const forecastSalary = potentialSalary * (historicalKVP / 100);
-
-            document.getElementById('forecastResult').innerHTML = `
-                <div class="stats-grid">
-                    <div class="stat-item">
-                        <div class="stat-value">${periodRecords.length}</div>
-                        <div class="stat-label">На основе записей</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value">${historicalKVP.toFixed(1)}%</div>
-                        <div class="stat-label">Ваш КВП (без учета больничных)</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value">${plannedRevenue.toFixed(2)} руб.</div>
-                        <div class="stat-label">Плановая выручка</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value">${potentialSalary.toFixed(2)} руб.</div>
-                        <div class="stat-label">Потенциальная зарплата (100% КВП)</div>
-                    </div>
-                    <div class="stat-item" style="border-left-color: var(--success); background: var(--gradient-surface);">
-                        <div class="stat-value" style="color: var(--success);">${forecastSalary.toFixed(2)} руб.</div>
-                        <div class="stat-label">Прогноз зарплаты</div>
-                    </div>
-                </div>
-                <div class="alert alert-info mt-lg">
-                    💡 В расчете КВП не учитываются занятия, отмененные по причине "Больничный/отпуск".
-                </div>
-            `;
+        // Скрыть модальное окно подтверждения удаления файла из GitHub
+        function hideDeleteConfirmation() {
+            document.getElementById('deleteModal').classList.remove('active');
         }
     </script>
 </body>
