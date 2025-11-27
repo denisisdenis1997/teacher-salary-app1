@@ -595,5 +595,53 @@
     "totalCancelledRevenue": 4400,
     "teacherSalary": 2660,
     "timestamp": "2025-11-27T14:51:16.172Z"
+  },
+  {
+    "date": "2025-11-25",
+    "planned": 8,
+    "conducted": 5,
+    "cancelled": 3,
+    "plannedCosts": [
+      1350,
+      1350,
+      1350,
+      1350,
+      1350,
+      1100,
+      1100,
+      1100
+    ],
+    "conductedCosts": [
+      1350,
+      1350,
+      1350,
+      1350,
+      1350
+    ],
+    "cancelledCosts": [
+      1100,
+      1100,
+      1100
+    ],
+    "lessonTypes": [
+      "intensive",
+      "intensive",
+      "intensive",
+      "intensive",
+      "intensive",
+      "individual",
+      "individual",
+      "individual"
+    ],
+    "cancellationReasons": [
+      "Больничный/отпуск",
+      "Больничный/отпуск",
+      "Больничный/отпуск"
+    ],
+    "totalPlannedRevenue": 10050,
+    "totalRevenue": 6750,
+    "totalCancelledRevenue": 3300,
+    "teacherSalary": 2700,
+    "timestamp": "2025-11-27T14:52:15.855Z"
   }
 ]
